@@ -360,6 +360,7 @@ const ResearchSystem = {
    ==================================================================================== */
 const Scene = {
   engine:null, scene:null, canvas:null, hemi:null, sun:null, fill:null, glow:null, ptex:null,
+  pipeline:null, shadowGen:null, probe:null, reflectiveMats:[],
   init(){
     this.canvas = document.getElementById('renderCanvas');
     this.engine = new BABYLON.Engine(this.canvas, true, {
@@ -370,7 +371,7 @@ const Scene = {
     const scene = new BABYLON.Scene(this.engine);
     this.scene = scene;
     scene.clearColor = new BABYLON.Color3(0.04,0.06,0.10);
-    scene.ambientColor = new BABYLON.Color3(0.36,0.40,0.50);
+    scene.ambientColor = new BABYLON.Color3(0.44,0.48,0.58);
     scene.collisionsEnabled = true;
     scene.skipPointerMovePicking = true;
     scene.blockMaterialDirtyMechanism = true;
@@ -380,45 +381,89 @@ const Scene = {
     scene.fogStart = 55; scene.fogEnd = 165;
 
     this.hemi = new BABYLON.HemisphericLight('hemi', new BABYLON.Vector3(0,1,0), scene);
-    this.hemi.intensity = 0.72;
-    this.hemi.groundColor = new BABYLON.Color3(0.18,0.20,0.26);
-    this.hemi.diffuse = new BABYLON.Color3(0.85,0.88,1.0);
+    this.hemi.intensity = 1.0;
+    this.hemi.groundColor = new BABYLON.Color3(0.22,0.24,0.30);
+    this.hemi.diffuse = new BABYLON.Color3(0.88,0.91,1.0);
     this.sun = new BABYLON.DirectionalLight('sun', new BABYLON.Vector3(-0.45,-1,-0.35), scene);
-    this.sun.intensity = 0.85;
+    this.sun.intensity = 1.18;
     this.sun.diffuse = new BABYLON.Color3(1.0,0.96,0.86);
     this.sun.position = new BABYLON.Vector3(40,70,40);
     // cool rim fill from opposite side
     this.fill = new BABYLON.DirectionalLight('fill', new BABYLON.Vector3(0.5,-0.4,0.5), scene);
-    this.fill.intensity = 0.25;
+    this.fill.intensity = 0.35;
     this.fill.diffuse = new BABYLON.Color3(0.5,0.7,1.0);
 
     this.ptex = this.makeParticleTex();
-    this.applyQuality();
     return scene;
   },
   applyScaling(){
     const dpr = window.devicePixelRatio||1;
     const low = G.settings && G.settings.quality==='low';
-    this.engine.setHardwareScalingLevel(low ? 1.7 : (dpr>=3 ? 1.4 : 1.0));
+    this.engine.setHardwareScalingLevel(low ? 1.7 : (dpr>=3 ? 1.35 : 1.0));
   },
-  applyQuality(){
+  applyQuality(){ this.setupFX(); },
+  /* cinematic FX: post-processing pipeline + reflection probe + soft shadows */
+  setupFX(){
     const high = !(G.settings && G.settings.quality==='low');
     const s=this.scene;
-    if(high){
-      if(!this.glow){ this.glow=new BABYLON.GlowLayer('glow',s,{mainTextureFixedSize:256, blurKernelSize:32}); this.glow.intensity=0.7; }
-    } else if(this.glow){ this.glow.dispose(); this.glow=null; }
+    try{
+      if(this.pipeline){ this.pipeline.dispose(); this.pipeline=null; }
+      if(this.shadowGen){ this.shadowGen.dispose(); this.shadowGen=null; }
+      if(this.probe){ this.setReflections(false); this.probe.dispose(); this.probe=null; }
+      if(Factory.setBlobShadows) Factory.setBlobShadows(!high);
+      if(high){
+        const cams=[CameraSys.walkCam, CameraSys.arcCam].filter(Boolean);
+        const pl=new BABYLON.DefaultRenderingPipeline('fx', true, s, cams);
+        pl.fxaaEnabled=true;
+        pl.bloomEnabled=true; pl.bloomThreshold=0.72; pl.bloomWeight=0.7; pl.bloomKernel=56; pl.bloomScale=0.6;
+        pl.imageProcessingEnabled=true;
+        const ip=pl.imageProcessing;
+        ip.toneMappingEnabled=true; ip.toneMappingType=BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+        ip.exposure=1.45; ip.contrast=1.3;
+        ip.vignetteEnabled=true; ip.vignetteWeight=1.3; ip.vignetteCameraFov=0.95;
+        ip.vignetteColor=new BABYLON.Color4(0,0,0,0);
+        pl.grainEnabled=true; pl.grain.intensity=5; pl.grain.animated=true;
+        pl.sharpenEnabled=true; pl.sharpen.edgeAmount=0.3; pl.sharpen.colorAmount=1.0;
+        this.pipeline=pl;
+        // live reflections of the neon factory
+        const probe=new BABYLON.ReflectionProbe('probe',192,s); probe.refreshRate=50;
+        probe.position=new BABYLON.Vector3(0,4,0);
+        Factory.staticMeshes().forEach(m=>probe.renderList.push(m));
+        this.probe=probe; this.setReflections(true);
+        // soft shadows from the key light
+        const sg=new BABYLON.ShadowGenerator(1024,this.sun);
+        sg.usePercentageCloserFiltering=true; sg.filteringQuality=BABYLON.ShadowGenerator.QUALITY_MEDIUM;
+        sg.darkness=0.5; sg.bias=0.0016; sg.normalBias=0.012;
+        Factory.shadowCasters().forEach(m=>{ try{ sg.addShadowCaster(m,true); }catch(e){} });
+        this.shadowGen=sg;
+      }
+    }catch(e){ console.warn('FX setup degraded:',e&&e.message); }
     this.applyScaling();
     if(Factory.setParticlesEnabled) Factory.setParticlesEnabled(high);
     document.getElementById('fps').style.display = (G.settings && G.settings.fps)?'block':'none';
   },
+  setReflections(on){
+    if(!this.reflectiveMats) return;
+    this.reflectiveMats.forEach(o=>{ const m=o.mat; if(m.unfreeze) m.unfreeze();
+      if(on && this.probe){ m.reflectionTexture=this.probe.cubeTexture;
+        const fp=new BABYLON.FresnelParameters(); fp.bias=o.bias; fp.power=o.power;
+        fp.leftColor=BABYLON.Color3.White(); fp.rightColor=new BABYLON.Color3(0.05,0.05,0.05);
+        m.reflectionFresnelParameters=fp;
+      } else { m.reflectionTexture=null; m.reflectionFresnelParameters=null; }
+      m.freeze();
+    });
+  },
+  refreshFX(){ if(this.scene) this.setupFX(); },
   mat(name,r,g,b,opts){
     const m=new BABYLON.StandardMaterial(name,this.scene);
     m.diffuseColor=new BABYLON.Color3(r,g,b);
     m.specularColor=new BABYLON.Color3((opts&&opts.spec!=null)?opts.spec:0.06,(opts&&opts.spec!=null)?opts.spec:0.06,(opts&&opts.spec!=null)?opts.spec:0.06);
+    if(opts&&opts.gloss!=null){ m.specularColor=new BABYLON.Color3(opts.gloss,opts.gloss,opts.gloss); m.specularPower=opts.glossPow||64; }
     if(opts&&opts.emissive!=null){ const e=opts.emissive; m.emissiveColor=new BABYLON.Color3(r*e,g*e,b*e); }
     if(opts&&opts.emc){ m.emissiveColor=new BABYLON.Color3(opts.emc[0],opts.emc[1],opts.emc[2]); }
     if(opts&&opts.alpha!=null) m.alpha=opts.alpha;
     if(opts&&opts.unlit){ m.disableLighting=true; m.emissiveColor=new BABYLON.Color3(r,g,b); }
+    if(opts&&opts.reflective){ (this.reflectiveMats=this.reflectiveMats||[]).push({mat:m, bias:opts.bias!=null?opts.bias:0.3, power:opts.power!=null?opts.power:2}); return m; }
     m.freeze();
     return m;
   },
@@ -437,15 +482,31 @@ const Scene = {
    ==================================================================================== */
 const Factory = {
   interactables:[], machineMeshes:{}, carTemplates:{}, carPools:{}, lineAnchors:[],
-  shadowTex:null, particlesOn:true,
+  shadowTex:null, particlesOn:true, blobs:[], ground:null,
+  /* meshes included in reflection probe + shadow casters */
+  staticMeshes(){
+    const pref=['lp','mt','mstr','mb','tr','bm','pl','bin','dock','tc','tb','signp','lab','lr','conv','w','fill','pb'];
+    return Scene.scene.meshes.filter(m=>m.isVisible && m.getTotalVertices && m.getTotalVertices()>0 &&
+      pref.some(p=>m.name===p||m.name.indexOf(p)===0));
+  },
+  shadowCasters(){
+    const out=[]; const add=m=>{ if(m) out.push(m); };
+    ['ptorso','phead','phat'].forEach(n=>add(Scene.scene.getMeshByName(n)));
+    (Player.legs||[]).forEach(add);
+    for(const c in this.carTemplates) add(this.carTemplates[c]);
+    Scene.scene.meshes.forEach(m=>{ if(m.name.indexOf('mb')===0||m.name.indexOf('mt')===0||m.name.indexOf('mau')===0) out.push(m); });
+    return out;
+  },
+  setBlobShadows(on){ this.blobs.forEach(b=>{ if(b&&b.setEnabled) b.setEnabled(on); }); },
   build(){
     const s=Scene.scene;
     this.shadowTex=this.makeShadowTex();
 
-    /* ground */
+    /* ground (glossy, reflects the neon factory) */
     const ground = BABYLON.MeshBuilder.CreateGround('ground',{width:130,height:96},s);
-    ground.material = Scene.mat('gmat',0.11,0.13,0.17,{spec:0.18});
-    ground.checkCollisions = true; ground.position.y=0; ground.freezeWorldMatrix();
+    ground.material = Scene.mat('gmat',0.09,0.11,0.15,{gloss:0.25,glossPow:48,reflective:true,bias:0.5,power:1.6});
+    ground.checkCollisions = true; ground.position.y=0; ground.receiveShadows=true; ground.freezeWorldMatrix();
+    this.ground=ground;
     const grid = Scene.mat('grid',0.20,0.24,0.32,{emissive:0.25});
     for(let i=-60;i<=60;i+=10){
       const l=BABYLON.MeshBuilder.CreateBox('gl',{width:130,height:0.02,depth:0.16},s);
@@ -533,7 +594,7 @@ const Factory = {
     const m=new BABYLON.StandardMaterial('blobm',s); m.diffuseTexture=this.shadowTex;
     m.useAlphaFromDiffuseTexture=true; m.disableLighting=true; m.emissiveColor=new BABYLON.Color3(0,0,0);
     m.opacityTexture=this.shadowTex; m.fogEnabled=false; m.freeze();
-    d.material=m; d.isPickable=false; d.position.y=0.03; return d;
+    d.material=m; d.isPickable=false; d.position.y=0.03; this.blobs.push(d); return d;
   },
 
   /* category-specific low-poly car silhouettes */
@@ -548,7 +609,7 @@ const Factory = {
       truck:{bw:1.5,bh:1.0,bd:1.3,cw:1.2,ch:0.85,cx:0.85,cz:0,by:0.75,cy:1.45,wd:0.62,wz:0.62,wx:0.7},
       sedan:{bw:2.6,bh:0.72,bd:1.25,cw:1.5,ch:0.62,cx:-0.05,cz:0,by:0.6,cy:1.12,wd:0.55,wz:0.58,wx:0.85},
     }[shape];
-    const bodyMat=Scene.mat('carmat_'+cat,col[0],col[1],col[2],{spec:0.35});
+    const bodyMat=Scene.mat('carmat_'+cat,col[0],col[1],col[2],{gloss:0.6,glossPow:96,reflective:true,bias:0.26,power:2.6});
     const body=BABYLON.MeshBuilder.CreateBox('cb',{width:dims.bw,height:dims.bh,depth:dims.bd},s);
     body.position.y=dims.by; body.material=bodyMat; parts.push(body);
     const cab=BABYLON.MeshBuilder.CreateBox('cc',{width:dims.cw,height:dims.ch,depth:dims.cd||(dims.bd-0.1)},s);
@@ -576,7 +637,7 @@ const Factory = {
     const s=Scene.scene;
     const pad=BABYLON.MeshBuilder.CreateGround('pad_'+name,{width:w,height:d},s);
     const m=Scene.mat('padm_'+name,col[0],col[1],col[2]); m.unfreeze(); m.alpha=0.5; m.freeze();
-    pad.material=m; pad.position.set(cx,0.02,cz); pad.isPickable=false; pad.freezeWorldMatrix();
+    pad.material=m; pad.position.set(cx,0.02,cz); pad.isPickable=false; pad.receiveShadows=true; pad.freezeWorldMatrix();
     const bm=Scene.mat('padb_'+name,col[0]*2.2,col[1]*2.2,col[2]*2.2,{unlit:true});
     [[w,0.3,0,d/2],[w,0.3,0,-d/2],[0.3,d,w/2,0],[0.3,d,-w/2,0]].forEach(seg=>{
       const b=BABYLON.MeshBuilder.CreateBox('pb',{width:seg[0],height:0.07,depth:seg[1]},s);
@@ -648,13 +709,11 @@ const Factory = {
     upper.position.set(0,1.0,0); upper.material=Scene.mat('mau_'+li+st.key,0.7,0.72,0.8); upper.parent=armPivot; upper.isPickable=false;
     const head=BABYLON.MeshBuilder.CreateBox('mah',{width:0.5,height:0.4,depth:0.5},s);
     head.position.set(0,2.1,0); head.material=Scene.mat('mah_'+li+st.key,baseCol[0],baseCol[1],baseCol[2],{emissive:0.6}); head.parent=armPivot; head.isPickable=false;
-    // glow ring
+    // glow ring (parented to root so it is cleaned up on line rebuilds)
     const glow=BABYLON.MeshBuilder.CreateTorus('mg',{diameter:4.4,thickness:0.16,tessellation:20},s);
-    glow.position.set(x,0.14,z);
+    glow.position.set(x,0.14,z); glow.parent=root;
     const gm=new BABYLON.StandardMaterial('mgm_'+li+st.key,s); gm.emissiveColor=new BABYLON.Color3(0.25,0.65,1); gm.disableLighting=true; gm.fogEnabled=false;
     glow.material=gm; glow.isPickable=false; glow.visibility=0;
-    // static AO pad
-    const pad=this.blobShadow(4.4); pad.position.set(x,0.04,z); pad.freezeWorldMatrix();
     // particles
     let sparks=null, mist=null;
     if(st.key==='frame'||st.key==='engine'||st.key==='qc') sparks=this.makeSparks(x+0.6,1.6,z+1.4,st.key);
@@ -1085,7 +1144,7 @@ const Expansion = {
     if(G.lines.length>=8){ UI.toast('Max lines reached','warn'); return; }
     G.cash-=c; Economy.spend(c);
     const d=JSON.parse(JSON.stringify(G.lines[G.lines.length-1].design)); d.name='Model '+String.fromCharCode(65+G.lines.length);
-    G.lines.push(makeLine(G.lines.length,d)); Factory.buildProductionLines();
+    G.lines.push(makeLine(G.lines.length,d)); Factory.buildProductionLines(); Scene.refreshFX();
     UI.toast('New production line built!','good'); Sound.upgrade();
   },
   warehouseCost(){ return Math.round(80000*Math.pow(1.6,G.factory.warehouseMult-1)); },
@@ -1108,7 +1167,7 @@ const Expansion = {
     G.cash-=c; Economy.spend(c); G.factory.secondFactory=true;
     const d1=DEFAULT_DESIGN(); d1.name='Model '+String.fromCharCode(65+G.lines.length); G.lines.push(makeLine(G.lines.length,d1));
     const d2=DEFAULT_DESIGN(); d2.name='Model '+String.fromCharCode(65+G.lines.length); G.lines.push(makeLine(G.lines.length,d2));
-    Factory.buildProductionLines();
+    Factory.buildProductionLines(); Scene.refreshFX();
     UI.toast('Second factory online! +2 lines','good'); Sound.upgrade(); }
 };
 
