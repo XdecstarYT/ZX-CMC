@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0c1018" />
+<title>AutoWorks Tycoon — Walkable Car Factory</title>
+<!-- Babylon.js (latest stable) is loaded with a multi-CDN fallback in the boot script below -->
+<style>
+  :root{
+    --bg:#0c1018; --panel:#161d2b; --panel2:#1f2a3d; --line:#2a3650;
+    --txt:#e8eef7; --muted:#9fb0c8; --acc:#4ea1ff; --acc2:#37d6a6;
+    --warn:#ffb454; --bad:#ff5d6c; --good:#37d6a6; --gold:#ffd24a;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; height:100%; width:100%; overflow:hidden;
+    background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    user-select:none; -webkit-user-select:none; touch-action:none; overscroll-behavior:none; }
+  #renderCanvas{ position:fixed; inset:0; width:100%; height:100%; display:block; outline:none; touch-action:none; }
+
+  /* ---------- Look pad (right-side camera control) ---------- */
+  #lookpad{ position:fixed; top:0; right:0; width:60%; height:100%; z-index:5; touch-action:none; }
+
+  /* ---------- Joystick ---------- */
+  #joyZone{ position:fixed; left:0; bottom:0; width:42%; height:55%; z-index:6; touch-action:none; }
+  #joyBase{ position:absolute; width:130px; height:130px; border-radius:50%;
+    background:rgba(20,28,44,.42); border:2px solid rgba(120,160,220,.35);
+    box-shadow:0 4px 20px rgba(0,0,0,.4); display:none; pointer-events:none; }
+  #joyKnob{ position:absolute; width:60px; height:60px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #6fb6ff, #2f6fd0);
+    border:2px solid rgba(255,255,255,.5); box-shadow:0 3px 10px rgba(0,0,0,.5);
+    transform:translate(-50%,-50%); pointer-events:none; }
+
+  /* ---------- Top HUD ---------- */
+  #topHud{ position:fixed; top:calc(8px + var(--safe-t)); left:8px; right:8px; z-index:20;
+    display:flex; gap:8px; align-items:center; pointer-events:none; flex-wrap:wrap; }
+  .stat{ background:rgba(16,22,34,.82); border:1px solid var(--line); border-radius:12px;
+    padding:6px 10px; font-size:13px; font-weight:600; pointer-events:auto; backdrop-filter:blur(6px);
+    display:flex; gap:6px; align-items:center; white-space:nowrap; }
+  .stat .lbl{ color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.04em;}
+  .stat .v{ color:var(--txt); }
+  .stat .v.good{ color:var(--good);} .stat .v.bad{ color:var(--bad);}
+  .pill{ font-size:11px; padding:2px 8px; border-radius:20px; font-weight:700; }
+  .pill.boom{ background:rgba(55,214,166,.18); color:var(--good);}
+  .pill.stable{ background:rgba(78,161,255,.18); color:var(--acc);}
+  .pill.recession{ background:rgba(255,93,108,.18); color:var(--bad);}
+
+  /* ---------- Mode toggle + interact ---------- */
+  #modeBtn{ position:fixed; right:10px; top:calc(54px + var(--safe-t)); z-index:21;
+    background:linear-gradient(180deg,#2f6fd0,#1c4f9e); color:#fff; border:none; border-radius:14px;
+    padding:12px 16px; font-size:14px; font-weight:800; box-shadow:0 5px 16px rgba(0,0,0,.45);
+    pointer-events:auto; letter-spacing:.03em; }
+  #modeBtn:active{ transform:scale(.96); }
+
+  #interactWrap{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(26px + var(--safe-b));
+    z-index:20; display:none; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  #interactName{ background:rgba(16,22,34,.9); border:1px solid var(--line); border-radius:10px;
+    padding:6px 12px; font-size:13px; font-weight:700; color:var(--gold); }
+  #interactBtns{ display:flex; gap:10px; pointer-events:auto; }
+  .ibtn{ background:linear-gradient(180deg,#37d6a6,#1f9e78); color:#06231b; border:none; border-radius:14px;
+    padding:14px 20px; font-size:15px; font-weight:800; box-shadow:0 5px 16px rgba(0,0,0,.4); }
+  .ibtn.sec{ background:linear-gradient(180deg,#4ea1ff,#2f6fd0); color:#03203f; }
+  .ibtn:active{ transform:scale(.95); }
+
+  /* ---------- Toast / log ---------- */
+  #toast{ position:fixed; left:50%; transform:translateX(-50%); top:calc(96px + var(--safe-t)); z-index:40;
+    display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; width:92%; max-width:460px;}
+  .toastItem{ background:rgba(16,22,34,.94); border:1px solid var(--line); border-left:4px solid var(--acc);
+    border-radius:10px; padding:8px 12px; font-size:13px; max-width:100%; opacity:0; transform:translateY(-6px);
+    transition:opacity .25s, transform .25s; box-shadow:0 4px 14px rgba(0,0,0,.4);}
+  .toastItem.show{ opacity:1; transform:translateY(0);}
+  .toastItem.good{ border-left-color:var(--good);} .toastItem.bad{ border-left-color:var(--bad);}
+  .toastItem.warn{ border-left-color:var(--warn);}
+
+  /* ---------- Management overlay ---------- */
+  #mgmt{ position:fixed; inset:0; z-index:30; display:none; flex-direction:column; pointer-events:none; }
+  #mgmtScrim{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(8,11,18,.35), rgba(8,11,18,.78)); }
+  #panelWrap{ position:relative; margin-top:auto; pointer-events:auto;
+    background:var(--bg); border-top:1px solid var(--line); border-radius:18px 18px 0 0;
+    max-height:72%; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.5); }
+  #panelHead{ padding:14px 16px 6px; display:flex; align-items:center; justify-content:space-between; }
+  #panelTitle{ font-size:18px; font-weight:800; }
+  #panelBody{ overflow-y:auto; -webkit-overflow-scrolling:touch; padding:6px 14px 14px; }
+  #navBar{ display:flex; border-top:1px solid var(--line); background:var(--panel);
+    padding-bottom:var(--safe-b); }
+  .nav{ flex:1; text-align:center; padding:10px 2px 12px; font-size:11px; color:var(--muted);
+    font-weight:600; pointer-events:auto; }
+  .nav .ic{ font-size:20px; display:block; line-height:1.1; }
+  .nav.active{ color:var(--acc); }
+  .nav.active .ic{ filter:drop-shadow(0 0 6px rgba(78,161,255,.6)); }
+
+  /* ---------- Cards / generic UI ---------- */
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:10px; }
+  .card h3{ margin:0 0 8px; font-size:14px; }
+  .row{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; font-size:13px;}
+  .row .k{ color:var(--muted);} .row .vv{ font-weight:700;}
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .btn{ background:linear-gradient(180deg,#2f6fd0,#1c4f9e); color:#fff; border:none; border-radius:11px;
+    padding:11px 12px; font-size:13px; font-weight:700; width:100%; }
+  .btn.alt{ background:linear-gradient(180deg,#37d6a6,#1f9e78); color:#06231b;}
+  .btn.warn{ background:linear-gradient(180deg,#ffb454,#d98a25); color:#3a2706;}
+  .btn.ghost{ background:transparent; border:1px solid var(--line); color:var(--txt);}
+  .btn:disabled{ opacity:.4; }
+  .btn:active{ transform:scale(.97); }
+  .small{ font-size:11px; color:var(--muted);}
+  .bar{ height:8px; border-radius:6px; background:var(--panel2); overflow:hidden; margin:5px 0;}
+  .bar > i{ display:block; height:100%; background:linear-gradient(90deg,#4ea1ff,#37d6a6); width:0%; }
+  .tag{ display:inline-block; font-size:10px; padding:2px 7px; border-radius:10px; background:var(--panel2);
+    color:var(--muted); font-weight:700; margin-left:6px;}
+  .tag.on{ background:rgba(55,214,166,.18); color:var(--good);}
+  .tag.lock{ background:rgba(255,93,108,.16); color:var(--bad);}
+  input[type=range]{ width:100%; accent-color:var(--acc); }
+  .seg{ display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+  .seg button{ flex:1; min-width:60px; padding:9px 4px; border-radius:10px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--muted); font-weight:700; font-size:12px;}
+  .seg button.sel{ background:var(--acc); color:#03203f; border-color:var(--acc);}
+  .closeX{ background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px;
+    width:34px; height:34px; font-size:18px; font-weight:800;}
+
+  /* ---------- Tech tree ---------- */
+  #techGrid{ display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; }
+  .techCol{ display:flex; flex-direction:column; gap:10px; min-width:130px; }
+  .techNode{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; }
+  .techNode.avail{ border-color:var(--acc); }
+  .techNode.done{ border-color:var(--good); background:rgba(55,214,166,.08); }
+  .techNode.lock{ opacity:.55; }
+  .techNode h4{ margin:0 0 4px; font-size:12px;}
+  .techNode .desc{ font-size:10px; color:var(--muted); margin-bottom:6px; min-height:26px;}
+
+  /* ---------- Intro ---------- */
+  #intro{ position:fixed; inset:0; z-index:100; background:radial-gradient(circle at 50% 30%, #16223a, #070a11 70%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  #intro h1{ font-size:30px; margin:0 0 4px; letter-spacing:.02em;
+    background:linear-gradient(90deg,#4ea1ff,#37d6a6); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  #intro p{ color:var(--muted); max-width:460px; font-size:14px; line-height:1.5; }
+  #startBtn{ margin-top:18px; background:linear-gradient(180deg,#37d6a6,#1f9e78); color:#06231b; border:none;
+    border-radius:16px; padding:16px 34px; font-size:18px; font-weight:900; box-shadow:0 8px 24px rgba(0,0,0,.5);}
+  #startBtn:active{ transform:scale(.96);}
+  #loadHint{ color:var(--muted); font-size:12px; margin-top:14px; min-height:16px;}
+  .feat{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px; max-width:480px;}
+  .feat span{ background:rgba(255,255,255,.05); border:1px solid var(--line); border-radius:20px;
+    padding:5px 11px; font-size:11px; color:var(--muted);}
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+  <div id="lookpad"></div>
+  <div id="joyZone"><div id="joyBase"><div id="joyKnob"></div></div></div>
+
+  <!-- Top HUD -->
+  <div id="topHud">
+    <div class="stat"><span class="lbl">Cash</span><span class="v" id="hudCash">$0</span></div>
+    <div class="stat"><span class="lbl">P/min</span><span class="v" id="hudPpm">$0</span></div>
+    <div class="stat"><span class="lbl">Rep</span><span class="v" id="hudRep">50</span></div>
+    <div class="stat"><span class="pill stable" id="hudEcon">STABLE</span></div>
+  </div>
+  <button id="modeBtn">🏭 MANAGE</button>
+
+  <!-- Interact prompt (walk mode) -->
+  <div id="interactWrap">
+    <div id="interactName">Machine</div>
+    <div id="interactBtns">
+      <button class="ibtn sec" id="btnInspect">Inspect</button>
+      <button class="ibtn" id="btnUpgrade">Upgrade</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Management overlay -->
+  <div id="mgmt">
+    <div id="mgmtScrim"></div>
+    <div id="panelWrap">
+      <div id="panelHead">
+        <div id="panelTitle">Dashboard</div>
+        <button class="closeX" id="panelClose">×</button>
+      </div>
+      <div id="panelBody"></div>
+      <div id="navBar">
+        <div class="nav active" data-tab="dashboard"><span class="ic">📊</span>Dashboard</div>
+        <div class="nav" data-tab="factory"><span class="ic">🏭</span>Factory</div>
+        <div class="nav" data-tab="design"><span class="ic">🚗</span>Design</div>
+        <div class="nav" data-tab="economy"><span class="ic">💹</span>Economy</div>
+        <div class="nav" data-tab="research"><span class="ic">🧪</span>Research</div>
+        <div class="nav" data-tab="company"><span class="ic">🏢</span>Company</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Intro -->
+  <div id="intro">
+    <h1>AUTOWORKS TYCOON</h1>
+    <p>Walk inside your own 3D car factory. Build production lines, design vehicles, manage a living global market, out-compete rival manufacturers and grow from a small workshop into a global empire.</p>
+    <div class="feat">
+      <span>🚶 Walkable Factory</span><span>🏭 6-Stage Pipeline</span><span>💹 Dynamic Market</span>
+      <span>🤖 AI Rivals</span><span>🧪 Tech Tree</span><span>📈 Tycoon Sim</span>
+    </div>
+    <button id="startBtn">▶ ENTER FACTORY</button>
+    <div id="loadHint">Loading engine…</div>
+  </div>
+
+<script>
+"use strict";
+/* =====================================================================================
+   AUTOWORKS TYCOON  —  Walkable 3D Car Manufacturing Tycoon
+   Single-file Babylon.js game.  Code structure:
+     /scene  /cameraSystem  /playerController  /factorySystem  /productionSystem
+     /economySystem  /supplyChainSystem  /aiSystem  /researchSystem  /uiSystem  /gameLoop  /saveSystem
+   ===================================================================================== */
+
+/* ------------------------------------------------------------------ helpers */
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+function fmtMoney(n){
+  const s=n<0?'-':''; n=Math.abs(n);
+  if(n>=1e9) return s+'$'+(n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return s+'$'+(n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return s+'$'+(n/1e3).toFixed(1)+'k';
+  return s+'$'+Math.round(n);
+}
+function fmtInt(n){ return Math.round(n).toLocaleString('en-US'); }
+
+/* ====================================================================================
+   GAME STATE  (the full serialisable model)
+   ==================================================================================== */
+const CATS = ['economy','suv','sports','truck','electric'];
+const CAT_META = {
+  economy:{ name:'Economy', color:[0.55,0.78,0.95], basePrice:16000, baseDemand:14, steel:3, elec:1, rubber:1 },
+  suv:    { name:'SUV',     color:[0.30,0.55,0.40], basePrice:34000, baseDemand:10, steel:5, elec:2, rubber:2 },
+  sports: { name:'Sports',  color:[0.92,0.28,0.30], basePrice:64000, baseDemand:5,  steel:4, elec:3, rubber:1 },
+  truck:  { name:'Truck',   color:[0.85,0.65,0.20], basePrice:42000, baseDemand:7,  steel:6, elec:2, rubber:3 },
+  electric:{name:'Electric',color:[0.20,0.85,0.80], basePrice:48000, baseDemand:9,  steel:3, elec:5, rubber:1 },
+};
+const STAGE_DEFS = [
+  { key:'frame',  name:'Frame Assembly',  time:4.0 },
+  { key:'engine', name:'Engine Install',  time:5.0 },
+  { key:'body',   name:'Body Assembly',   time:4.0 },
+  { key:'paint',  name:'Paint Shop',      time:3.0 },
+  { key:'qc',     name:'Quality Control', time:3.0 },
+  { key:'ship',   name:'Shipping',        time:2.0 },
+];
+const SIZES = ['Small','Medium','Large','Mega','Global Empire'];
+
+function freshState(){
+  return {
+    version:3,
+    cash:250000, debt:0, reputation:50, valuation:0,
+    researchPoints:0,
+    economy:{ state:'stable', timer:90, demandMult:1.0 },
+    profit:{ windowRev:0, windowCost:0, ppm:0, lastReset:0 },
+    stats:{ carsBuilt:0, carsSold:0, revenue:0, time:0 },
+    resources:{
+      steel:      { amt:400, cap:1000, price:220, base:220 },
+      electronics:{ amt:300, cap:800,  price:540, base:540 },
+      rubber:     { amt:350, cap:800,  price:120, base:120 },
+    },
+    contracts:[], // {res, price, qtyPerMin, ticksLeft}
+    design:{ category:'economy', enginePower:55, weight:50, qualityTarget:60 },
+    factory:{ sizeIdx:0, warehouseMult:1, automation:0, secondFactory:false },
+    lines:[ makeLine(0) ],
+    machineLv:{}, // "line#-stagekey" -> level   (filled lazily, lvl 1 default)
+    research:{ unlocked:{} },
+    market:(function(){ const m={}; CATS.forEach(c=>{ m[c]={ price:CAT_META[c].basePrice, sat:0, demand:CAT_META[c].baseDemand }; }); return m; })(),
+    ai:[
+      { name:'VeloMotors',  cash:300000, rep:55, share:0.16, strat:'aggressive', prod:1.0, focus:'economy' },
+      { name:'TitanAuto',   cash:400000, rep:62, share:0.18, strat:'premium',    prod:0.8, focus:'sports'  },
+      { name:'NovaDrive',   cash:350000, rep:58, share:0.15, strat:'balanced',   prod:0.9, focus:'electric'},
+      { name:'IronWorks',   cash:320000, rep:50, share:0.14, strat:'aggressive', prod:1.1, focus:'truck'   },
+    ],
+  };
+}
+function makeLine(idx){
+  return { id:idx, slots: STAGE_DEFS.map(()=>null) };  // each slot holds a car or null
+}
+let G = freshState();
+
+/* machine level accessor */
+function mlKey(lineId,stageKey){ return lineId+'-'+stageKey; }
+function machineLevel(lineId,stageKey){ const k=mlKey(lineId,stageKey); return G.machineLv[k]||1; }
+function setMachineLevel(lineId,stageKey,v){ G.machineLv[mlKey(lineId,stageKey)]=v; }
+
+/* ====================================================================================
+   RESEARCH SYSTEM  (node-based tech tree)
+   ==================================================================================== */
+const TECH = {
+  fastlines:{ name:'Faster Lines', tier:0, cost:40, deps:[], desc:'-18% stage time on every machine.' },
+  qcsystems:{ name:'QC Systems',   tier:0, cost:35, deps:[], desc:'-30% defect chance across all stages.' },
+  robotics: { name:'Robotics',     tier:1, cost:90, deps:['fastlines'], desc:'Automation +1: faster lines, auto-restock.' },
+  ev:       { name:'EV Platform',  tier:1, cost:80, deps:['qcsystems'], desc:'Unlock the Electric vehicle category.' },
+  aiqc:     { name:'AI Quality',   tier:2, cost:140, deps:['robotics','qcsystems'], desc:'+12 build quality, near-zero defects.' },
+  logistics:{ name:'Logistics',    tier:2, cost:120, deps:['robotics'], desc:'+10% sale price, faster shipping.' },
+  megafac:  { name:'Mega Factory', tier:3, cost:220, deps:['logistics'], desc:'Cheaper expansions, unlock 2nd factory.' },
+};
+const ResearchSystem = {
+  has(id){ return !!G.research.unlocked[id]; },
+  available(id){ const t=TECH[id]; if(this.has(id)) return false; return t.deps.every(d=>this.has(d)); },
+  unlock(id){
+    const t=TECH[id]; if(!t||this.has(id)||!this.available(id)) return false;
+    if(G.researchPoints < t.cost){ UI.toast('Need '+t.cost+' RP to research '+t.name,'bad'); return false; }
+    G.researchPoints -= t.cost; G.research.unlocked[id]=true;
+    if(id==='robotics') G.factory.automation = Math.max(G.factory.automation,1);
+    if(id==='ev') UI.toast('Electric vehicles unlocked!','good');
+    UI.toast('Researched: '+t.name,'good');
+    return true;
+  },
+  // aggregate modifiers
+  stageTimeMult(){ let m=1; if(this.has('fastlines'))m*=0.82; if(this.has('robotics'))m*=0.90; return m; },
+  defectMult(){ let m=1; if(this.has('qcsystems'))m*=0.70; if(this.has('aiqc'))m*=0.15; return m; },
+  qualityBonus(){ return this.has('aiqc')?12:0; },
+  sellMult(){ return this.has('logistics')?1.10:1.0; },
+  evUnlocked(){ return this.has('ev'); },
+};
+
+/* ====================================================================================
+   SCENE  /  ENGINE
+   ==================================================================================== */
+const Scene = {
+  engine:null, scene:null, canvas:null, hemi:null, sun:null,
+  init(){
+    this.canvas = document.getElementById('renderCanvas');
+    this.engine = new BABYLON.Engine(this.canvas, true, {
+      preserveDrawingBuffer:false, stencil:false, antialias:true,
+      powerPreference:'high-performance', failIfMajorPerformanceCaveat:false
+    });
+    // Engine renders at CSS-pixel resolution (adaptToDeviceRatio off) which is already
+    // a big perf win on retina. Add a little extra headroom on very high-DPR phones.
+    const dpr = window.devicePixelRatio||1;
+    this.engine.setHardwareScalingLevel(dpr>=3 ? 1.4 : 1.0);
+    const scene = new BABYLON.Scene(this.engine);
+    this.scene = scene;
+    scene.clearColor = new BABYLON.Color3(0.05,0.07,0.11);
+    scene.ambientColor = new BABYLON.Color3(0.4,0.45,0.55);
+    scene.collisionsEnabled = true;
+    scene.gravity = new BABYLON.Vector3(0,-0.4,0);
+    scene.skipPointerMovePicking = true;       // perf: we don't need hover picking
+    scene.autoClearDepthAndStencil = true;
+    scene.blockMaterialDirtyMechanism = true;
+
+    this.hemi = new BABYLON.HemisphericLight('hemi', new BABYLON.Vector3(0,1,0), scene);
+    this.hemi.intensity = 0.85;
+    this.hemi.groundColor = new BABYLON.Color3(0.22,0.24,0.30);
+    this.sun = new BABYLON.DirectionalLight('sun', new BABYLON.Vector3(-0.5,-1,-0.35), scene);
+    this.sun.intensity = 0.7;
+    this.sun.position = new BABYLON.Vector3(40,60,40);
+    return scene;
+  },
+  mat(name,r,g,b,opts){
+    const m=new BABYLON.StandardMaterial(name,this.scene);
+    m.diffuseColor=new BABYLON.Color3(r,g,b);
+    m.specularColor=new BABYLON.Color3(0.05,0.05,0.05);
+    if(opts&&opts.emissive) m.emissiveColor=new BABYLON.Color3(r*0.35,g*0.35,b*0.35);
+    if(opts&&opts.alpha!=null) m.alpha=opts.alpha;
+    m.freeze();
+    return m;
+  }
+};
+
+/* ====================================================================================
+   FACTORY SYSTEM  —  world geometry, zones, machines, interactables
+   ==================================================================================== */
+const Factory = {
+  interactables:[],      // {pos, radius, name, type, data, mesh}
+  machineMeshes:{},      // key -> {root, glow}
+  carTemplates:{},       // category -> hidden template mesh (instanced per car)
+  carPools:{},           // category -> array of free instances
+  lineAnchors:[],        // per-line world positions of each stage
+  build(){
+    const s=Scene.scene;
+    /* ----- ground ----- */
+    const ground = BABYLON.MeshBuilder.CreateGround('ground',{width:120,height:90},s);
+    ground.material = Scene.mat('gmat',0.13,0.15,0.19);
+    ground.checkCollisions = true;
+    ground.position.y = 0;
+    ground.freezeWorldMatrix();
+    // floor grid accent lines
+    const grid = Scene.mat('grid',0.18,0.21,0.27);
+    for(let i=-55;i<=55;i+=10){
+      const l=BABYLON.MeshBuilder.CreateBox('gl',{width:120,height:0.02,depth:0.18},s);
+      l.position.set(0,0.011,i); l.material=grid; l.isPickable=false; l.freezeWorldMatrix();
+      const l2=BABYLON.MeshBuilder.CreateBox('gl',{width:0.18,height:0.02,depth:90},s);
+      l2.position.set(i,0.011,0); l2.material=grid; l2.isPickable=false; l2.freezeWorldMatrix();
+    }
+
+    /* ----- perimeter walls (collision) ----- */
+    const wallMat = Scene.mat('wall',0.16,0.18,0.24);
+    const wallTop = Scene.mat('walltop',0.26,0.5,0.85,{emissive:true});
+    const mkWall=(w,h,d,x,y,z)=>{ const b=BABYLON.MeshBuilder.CreateBox('w',{width:w,height:h,depth:d},s);
+      b.position.set(x,y,z); b.material=wallMat; b.checkCollisions=true; b.freezeWorldMatrix(); return b; };
+    mkWall(120,6,1,0,3,-45); mkWall(120,6,1,0,3,45); mkWall(1,6,90,-60,3,0); mkWall(1,6,90,60,3,0);
+    // glowing strip along walls (visual)
+    [[120,-44.4],[120,44.4]].forEach(()=>{});
+
+    /* ----- car templates (low-poly), one per category, used for instances ----- */
+    CATS.forEach(cat=>{
+      const col=CAT_META[cat].color;
+      const tpl=this.makeCarMesh(s,col,cat);
+      tpl.isVisible=false; tpl.isPickable=false;
+      this.carTemplates[cat]=tpl; this.carPools[cat]=[];
+    });
+
+    /* ----- zones ----- */
+    // Layout (X across, Z depth):
+    //  Production lines run along +X in the central hall (z ~ -6..+6 region per line)
+    //  Warehouse left (-X), Research lab back-left, Shipping dock right (+X far)
+    this.makeZonePad('Production Hall', 0,  0,  46,26, [0.18,0.30,0.45]);
+    this.makeZonePad('Warehouse',     -44, 0,  22,34, [0.40,0.30,0.18]);
+    this.makeZonePad('Research Lab',  -44,-30, 22,18, [0.30,0.20,0.42]);
+    this.makeZonePad('Shipping Dock',  44, 0,  22,30, [0.18,0.42,0.34]);
+
+    this.buildProductionLines();
+    this.buildWarehouse();
+    this.buildResearchLab();
+    this.buildShippingDock();
+    this.refreshZoneLocks();
+  },
+
+  makeCarMesh(s,col,cat){
+    const body=BABYLON.MeshBuilder.CreateBox('cbody',{width:2.4,height:0.7,depth:1.2},s); body.position.y=0.55;
+    const cab=BABYLON.MeshBuilder.CreateBox('ccab',{width:1.2,height:0.6,depth:1.05},s); cab.position.set(-0.1,1.05,0);
+    const w=[];
+    const wp=[[0.8,0.55],[0.8,-0.55],[-0.8,0.55],[-0.8,-0.55]];
+    wp.forEach(p=>{ const wheel=BABYLON.MeshBuilder.CreateCylinder('cw',{diameter:0.55,height:0.25,tessellation:8},s);
+      wheel.rotation.x=Math.PI/2; wheel.position.set(p[0],0.3,p[1]); w.push(wheel); });
+    const merged=BABYLON.Mesh.MergeMeshes([body,cab,...w],true,true,undefined,false,false);
+    merged.name='carTpl_'+cat;
+    const m=new BABYLON.StandardMaterial('carmat_'+cat,s); m.diffuseColor=new BABYLON.Color3(col[0],col[1],col[2]);
+    m.specularColor=new BABYLON.Color3(0.25,0.25,0.25); m.freeze(); merged.material=m;
+    return merged;
+  },
+
+  makeZonePad(name,cx,cz,w,d,col){
+    const s=Scene.scene;
+    const pad=BABYLON.MeshBuilder.CreateGround('pad_'+name,{width:w,height:d},s);
+    const m=Scene.mat('padm_'+name,col[0],col[1],col[2]); m.alpha=0.55;
+    pad.material=m; pad.position.set(cx,0.02,cz); pad.isPickable=false; pad.freezeWorldMatrix();
+    // border
+    const bm=Scene.mat('padb_'+name,col[0]*1.6,col[1]*1.6,col[2]*1.6,{emissive:true});
+    const t=0.3;
+    [[w,t,0,d/2],[w,t,0,-d/2],[t,d,w/2,0],[t,d,-w/2,0]].forEach(seg=>{
+      const b=BABYLON.MeshBuilder.CreateBox('pb',{width:seg[0],height:0.06,depth:seg[1]},s);
+      b.position.set(cx+seg[2],0.04,cz+seg[3]); b.material=bm; b.isPickable=false; b.freezeWorldMatrix();
+    });
+    // floating sign
+    this.makeSign(name,cx,5.5,cz - d/2 + 0.6);
+  },
+
+  makeSign(text,x,y,z){
+    const s=Scene.scene;
+    const dt=new BABYLON.DynamicTexture('sign_'+text,{width:512,height:128},s,true);
+    dt.hasAlpha=true;
+    const ctx=dt.getContext();
+    ctx.clearRect(0,0,512,128);
+    dt.drawText(text,null,90,'bold 64px sans-serif','#ffffff','transparent',true);
+    const mat=new BABYLON.StandardMaterial('signm_'+text,s);
+    mat.diffuseTexture=dt; mat.emissiveColor=new BABYLON.Color3(1,1,1); mat.opacityTexture=dt;
+    mat.backFaceCulling=false; mat.disableLighting=true; mat.freeze();
+    const plane=BABYLON.MeshBuilder.CreatePlane('signp_'+text,{width:9,height:2.25},s);
+    plane.material=mat; plane.position.set(x,y,z); plane.isPickable=false;
+    plane.billboardMode=BABYLON.Mesh.BILLBOARDMODE_Y;
+    return plane;
+  },
+
+  /* ---------- production lines ---------- */
+  buildProductionLines(){
+    // remove existing machine meshes for lines beyond current (rebuild all)
+    Object.values(this.machineMeshes).forEach(o=>{ if(o.root) o.root.dispose(); });
+    this.machineMeshes={}; this.lineAnchors=[];
+    this.interactables = this.interactables.filter(it=>it.type!=='machine');
+
+    const s=Scene.scene;
+    const startX=-18, stepX=7.2;           // machines along +X
+    const lineGapZ=8;                       // distance between lines
+    const baseZ = - (G.lines.length-1)*lineGapZ/2;
+    G.lines.forEach((line,li)=>{
+      const z = baseZ + li*lineGapZ;
+      const anchors=[];
+      STAGE_DEFS.forEach((st,si)=>{
+        const x=startX+si*stepX;
+        anchors.push(new BABYLON.Vector3(x,0,z));
+        const root=this.makeMachineMesh(s,st,li,x,z);
+        this.machineMeshes[mlKey(line.id,st.key)] = root;
+        // interactable
+        this.interactables.push({
+          pos:new BABYLON.Vector3(x,1,z-2.0), radius:3.4, name:'Line '+(li+1)+' · '+st.name,
+          type:'machine', data:{lineId:line.id, stageKey:st.key}, mesh:root.glow
+        });
+      });
+      // conveyor strip connecting machines
+      const conv=BABYLON.MeshBuilder.CreateBox('conv',{width:stepX*(STAGE_DEFS.length-1)+3,height:0.12,depth:1.4},s);
+      conv.position.set(startX + stepX*(STAGE_DEFS.length-1)/2, 0.45, z+1.6);
+      conv.material=Scene.mat('convm',0.10,0.11,0.14); conv.isPickable=false; conv.freezeWorldMatrix();
+      this.lineAnchors[li]=anchors;
+    });
+  },
+  makeMachineMesh(s,st,li,x,z){
+    const root=new BABYLON.TransformNode('mach_'+li+'_'+st.key,s);
+    const baseCol={ frame:[0.5,0.5,0.55], engine:[0.85,0.5,0.2], body:[0.4,0.6,0.85],
+                    paint:[0.8,0.3,0.7], qc:[0.3,0.8,0.6], ship:[0.85,0.75,0.25] }[st.key];
+    const body=BABYLON.MeshBuilder.CreateBox('mb',{width:3,height:3,depth:2.4},s);
+    body.position.set(x,1.5,z); body.material=Scene.mat('mm_'+li+st.key,baseCol[0]*0.6,baseCol[1]*0.6,baseCol[2]*0.6);
+    body.checkCollisions=true; body.parent=root; body.freezeWorldMatrix(); body.isPickable=false;
+    const top=BABYLON.MeshBuilder.CreateBox('mt',{width:2.2,height:0.5,depth:1.8},s);
+    top.position.set(x,3.2,z); top.material=Scene.mat('mt_'+li+st.key,baseCol[0],baseCol[1],baseCol[2],{emissive:true});
+    top.parent=root; top.freezeWorldMatrix(); top.isPickable=false;
+    const arm=BABYLON.MeshBuilder.CreateBox('marm',{width:0.4,height:2.4,depth:0.4},s);
+    arm.position.set(x+1.2,2.2,z-1.0); arm.material=Scene.mat('marm_'+li+st.key,0.3,0.32,0.4);
+    arm.parent=root; arm.isPickable=false; // animated (not frozen)
+    // glow ring under machine (highlight target)
+    const glow=BABYLON.MeshBuilder.CreateTorus('mg',{diameter:4.2,thickness:0.18,tessellation:18},s);
+    glow.position.set(x,0.12,z); glow.rotation.x=0;
+    const gm=new BABYLON.StandardMaterial('mgm_'+li+st.key,s); gm.emissiveColor=new BABYLON.Color3(0.2,0.6,1);
+    gm.disableLighting=true; glow.material=gm; glow.isPickable=false; glow.visibility=0;
+    return {root, glow, arm, top, x, z};
+  },
+
+  /* ---------- warehouse ---------- */
+  buildWarehouse(){
+    const s=Scene.scene; const cx=-44, cz=0;
+    const cols={ steel:[0.6,0.62,0.68], electronics:[0.3,0.7,0.95], rubber:[0.2,0.2,0.24] };
+    let i=0;
+    for(const r of ['steel','electronics','rubber']){
+      const x=cx-6+i*6, z=cz-6;
+      const bin=BABYLON.MeshBuilder.CreateBox('bin_'+r,{width:4,height:4,depth:4},s);
+      bin.position.set(x,2,z); bin.material=Scene.mat('binm_'+r,cols[r][0]*0.7,cols[r][1]*0.7,cols[r][2]*0.7);
+      bin.checkCollisions=true; bin.freezeWorldMatrix(); bin.isPickable=false;
+      // fill indicator (scales with stock) — kept dynamic
+      const fill=BABYLON.MeshBuilder.CreateBox('fill_'+r,{width:3.4,height:3.4,depth:3.4},s);
+      fill.position.set(x,1.9,z); fill.material=Scene.mat('fillm_'+r,cols[r][0],cols[r][1],cols[r][2],{emissive:true});
+      fill.isPickable=false; fill.metadata={res:r};
+      this.warehouseFills=this.warehouseFills||{}; this.warehouseFills[r]=fill;
+      this.makeSign(r.toUpperCase(), x, 5, z-2.4);
+      i++;
+    }
+    this.interactables.push({ pos:new BABYLON.Vector3(cx,1,cz+4), radius:6, name:'Warehouse · Supply',
+      type:'warehouse', data:{}, mesh:null });
+  },
+
+  /* ---------- research lab ---------- */
+  buildResearchLab(){
+    const s=Scene.scene; const cx=-44, cz=-30;
+    const dome=BABYLON.MeshBuilder.CreateSphere('lab',{diameter:6,segments:10},s);
+    dome.position.set(cx,3,cz); dome.scaling.y=0.7;
+    dome.material=Scene.mat('labm',0.4,0.3,0.7,{emissive:true}); dome.material.alpha=0.9;
+    dome.checkCollisions=true; dome.isPickable=false; dome.freezeWorldMatrix();
+    const core=BABYLON.MeshBuilder.CreateCylinder('labcore',{diameter:1.4,height:4,tessellation:8},s);
+    core.position.set(cx,2,cz); core.material=Scene.mat('labcorem',0.6,0.9,1,{emissive:true});
+    core.isPickable=false; this.labCore=core;
+    this.interactables.push({ pos:new BABYLON.Vector3(cx,1,cz+5), radius:6, name:'Research Lab',
+      type:'research', data:{}, mesh:null });
+  },
+
+  /* ---------- shipping dock ---------- */
+  buildShippingDock(){
+    const s=Scene.scene; const cx=44, cz=0;
+    for(let i=0;i<3;i++){
+      const z=cz-8+i*8;
+      const dock=BABYLON.MeshBuilder.CreateBox('dock',{width:6,height:1.2,depth:5},s);
+      dock.position.set(cx,0.6,z); dock.material=Scene.mat('dockm'+i,0.2,0.4,0.34);
+      dock.checkCollisions=true; dock.isPickable=false; dock.freezeWorldMatrix();
+      // truck
+      const truck=BABYLON.MeshBuilder.CreateBox('truck',{width:3,height:2,depth:2.4},s);
+      truck.position.set(cx+5,1.4,z); truck.material=Scene.mat('truckm'+i,0.7,0.7,0.2);
+      truck.isPickable=false; truck.freezeWorldMatrix();
+    }
+    this.interactables.push({ pos:new BABYLON.Vector3(cx-5,1,cz+6), radius:6, name:'Shipping Dock',
+      type:'shipping', data:{}, mesh:null });
+  },
+
+  /* zone lock visuals based on factory size (simple gating) */
+  refreshZoneLocks(){ /* all zones available from start; expansion adds lines instead */ },
+
+  /* car instance pool (per category, so each car shows its category colour) */
+  acquireCar(category){
+    const pool=this.carPools[category]||(this.carPools[category]=[]);
+    let inst = pool.pop();
+    if(!inst){
+      const tpl=this.carTemplates[category]||this.carTemplates.economy;
+      inst = tpl.createInstance('carI_'+category+'_'+Math.random().toString(36).slice(2,7));
+      inst.metadata={cat:category};
+    }
+    inst.isVisible=true;
+    return inst;
+  },
+  releaseCar(inst){ if(!inst) return; inst.isVisible=false;
+    const cat=(inst.metadata&&inst.metadata.cat)||'economy';
+    (this.carPools[cat]||(this.carPools[cat]=[])).push(inst); },
+};
+
+/* ====================================================================================
+   CAMERA SYSTEM  —  walk (follow) + management (arc)
+   ==================================================================================== */
+const CameraSys = {
+  walkCam:null, arcCam:null, yaw:0, pitch:0.32, dist:8,
+  init(){
+    const s=Scene.scene;
+    this.walkCam = new BABYLON.FreeCamera('walk', new BABYLON.Vector3(0,3,-12), s);
+    this.walkCam.minZ=0.15; this.walkCam.maxZ=240; this.walkCam.fov=0.95;
+    this.arcCam = new BABYLON.ArcRotateCamera('arc', -Math.PI/2, 0.95, 70, new BABYLON.Vector3(0,0,0), s);
+    this.arcCam.lowerRadiusLimit=25; this.arcCam.upperRadiusLimit=140;
+    this.arcCam.upperBetaLimit=1.45; this.arcCam.minZ=0.5; this.arcCam.maxZ=400;
+    this.arcCam.panningSensibility=0; this.arcCam.wheelDeltaPercentage=0.01;
+    s.activeCamera = this.walkCam;
+  },
+  enterWalk(){
+    const s=Scene.scene;
+    this.arcCam.detachControl();
+    s.activeCamera=this.walkCam;
+    this.update(0);
+  },
+  enterManage(){
+    const s=Scene.scene;
+    s.activeCamera=this.arcCam;
+    this.arcCam.attachControl(Scene.canvas,true);
+  },
+  update(dt){
+    const p=Player.mesh.position;
+    const cy=Math.cos(this.pitch), sy=Math.sin(this.pitch);
+    const fx=Math.sin(this.yaw), fz=Math.cos(this.yaw);
+    const r=this.dist*cy;
+    this.walkCam.position.x = p.x - fx*r;
+    this.walkCam.position.z = p.z - fz*r;
+    this.walkCam.position.y = p.y + 2.2 + this.dist*sy;
+    this.walkCam.setTarget(new BABYLON.Vector3(p.x, p.y+1.3, p.z));
+  },
+  // forward/right vectors on ground plane (for movement)
+  forward(){ return {x:Math.sin(this.yaw), z:Math.cos(this.yaw)}; },
+  right(){ return {x:Math.cos(this.yaw), z:-Math.sin(this.yaw)}; },
+  look(dx,dy){
+    this.yaw   -= dx*0.005;
+    this.pitch  = clamp(this.pitch + dy*0.004, 0.05, 1.15);
+  }
+};
+
+/* ====================================================================================
+   PLAYER CONTROLLER  —  capsule + joystick movement + collisions
+   ==================================================================================== */
+const Player = {
+  mesh:null, speed:9, joy:{x:0,y:0}, keys:{},
+  init(){
+    const s=Scene.scene;
+    const body=BABYLON.MeshBuilder.CreateCapsule('player',{height:2,radius:0.45,tessellation:8},s);
+    body.position.set(0,1,-12);
+    const m=new BABYLON.StandardMaterial('pm',s); m.diffuseColor=new BABYLON.Color3(0.95,0.8,0.2);
+    m.emissiveColor=new BABYLON.Color3(0.25,0.2,0.03); body.material=m;
+    body.checkCollisions=true;
+    body.ellipsoid=new BABYLON.Vector3(0.55,1,0.55);
+    body.ellipsoidOffset=new BABYLON.Vector3(0,1,0);
+    body.isPickable=false;
+    // little direction nose
+    const nose=BABYLON.MeshBuilder.CreateBox('nose',{width:0.3,height:0.3,depth:0.5},s);
+    nose.position.set(0,1.1,0.5); nose.parent=body;
+    nose.material=Scene.mat('nosem',0.2,0.2,0.25); nose.isPickable=false;
+    this.mesh=body;
+  },
+  update(dt){
+    if(Game.mode!=='walk') return;
+    let ix=this.joy.x, iy=this.joy.y;
+    // keyboard fallback (desktop testing)
+    if(this.keys['w']||this.keys['ArrowUp']) iy=1;
+    if(this.keys['s']||this.keys['ArrowDown']) iy=-1;
+    if(this.keys['a']||this.keys['ArrowLeft']) ix=-1;
+    if(this.keys['d']||this.keys['ArrowRight']) ix=1;
+    const f=CameraSys.forward(), r=CameraSys.right();
+    let mx = f.x*iy + r.x*ix;
+    let mz = f.z*iy + r.z*ix;
+    const mag=Math.hypot(mx,mz);
+    if(mag>0.01){
+      mx/=mag; mz/=mag;
+      const sp=this.speed*dt;
+      this.mesh.moveWithCollisions(new BABYLON.Vector3(mx*sp,0,mz*sp));
+      this.mesh.rotation.y = Math.atan2(mx,mz);
+    }
+    // keep on ground plane
+    this.mesh.position.y = 1;
+    // clamp inside arena
+    this.mesh.position.x = clamp(this.mesh.position.x,-58,58);
+    this.mesh.position.z = clamp(this.mesh.position.z,-43,43);
+  }
+};
+
+/* ====================================================================================
+   SUPPLY CHAIN SYSTEM  —  resources, prices, contracts
+   ==================================================================================== */
+const Supply = {
+  carCost(category){
+    const cm=CAT_META[category];
+    const r=G.resources;
+    const mat = cm.steel*r.steel.price + cm.elec*r.electronics.price + cm.rubber*r.rubber.price;
+    const d=G.design;
+    const build = 1500 + d.enginePower*40 + d.qualityTarget*55 + d.weight*8;
+    return mat + build;
+  },
+  canConsume(category){
+    const cm=CAT_META[category], r=G.resources;
+    return r.steel.amt>=cm.steel && r.electronics.amt>=cm.elec && r.rubber.amt>=cm.rubber;
+  },
+  consume(category){
+    const cm=CAT_META[category], r=G.resources;
+    r.steel.amt-=cm.steel; r.electronics.amt-=cm.elec; r.rubber.amt-=cm.rubber;
+  },
+  buy(res,qty){
+    const r=G.resources[res];
+    qty=Math.min(qty, r.cap-r.amt);
+    if(qty<=0){ UI.toast('Storage full for '+res,'warn'); return; }
+    const cost=qty*r.price;
+    if(G.cash<cost){ qty=Math.floor(G.cash/r.price); if(qty<=0){ UI.toast('Not enough cash','bad'); return; } }
+    G.cash-=qty*r.price; r.amt+=qty;
+    Economy.spend(qty*r.price);
+    UI.toast('Bought '+qty+' '+res+' for '+fmtMoney(qty*r.price),'good');
+  },
+  capacity(){
+    // warehouse expansions scale caps
+    return G.factory.warehouseMult;
+  },
+  tickPrices(){
+    for(const k in G.resources){
+      const r=G.resources[k];
+      // random walk toward base with volatility + scarcity swings
+      const drift=(r.base-r.price)*0.04;
+      const vol=r.base*0.03*(Math.random()*2-1);
+      r.price=clamp(r.price+drift+vol, r.base*0.55, r.base*1.9);
+    }
+  },
+  tickContracts(){
+    G.contracts.forEach(c=>{
+      if(c.ticksLeft<=0) return;
+      const r=G.resources[c.res];
+      const space=r.cap-r.amt;
+      const qty=Math.min(c.qtyPerMin/60, space);   // per-second delivery
+      if(qty>0){
+        const cost=qty*c.price;
+        if(G.cash>=cost){ G.cash-=cost; Economy.spend(cost); r.amt+=qty; }
+      }
+      c.ticksLeft--;
+    });
+    G.contracts=G.contracts.filter(c=>c.ticksLeft>0);
+  },
+  signContract(res,qtyPerMin,ticks){
+    const r=G.resources[res];
+    const lockPrice=Math.round(r.price*0.92); // slight discount to lock
+    G.contracts.push({res, price:lockPrice, qtyPerMin, ticksLeft:ticks});
+    UI.toast('Contract: '+qtyPerMin+'/min '+res+' @ '+fmtMoney(lockPrice),'good');
+  },
+  autoRestock(){
+    if(G.factory.automation<1) return;
+    for(const k in G.resources){
+      const r=G.resources[k];
+      if(r.amt < r.cap*0.2){
+        const qty=Math.floor(Math.min(r.cap*0.3, r.cap-r.amt));
+        const cost=qty*r.price;
+        if(G.cash>=cost && qty>0){ G.cash-=cost; Economy.spend(cost); r.amt+=qty; }
+      }
+    }
+  }
+};
+
+/* ====================================================================================
+   PRODUCTION SYSTEM  —  assembly-line pipeline
+   ==================================================================================== */
+const Production = {
+  carSeq:1,
+  stageTime(lineId,stageKey){
+    const def=STAGE_DEFS.find(s=>s.key===stageKey);
+    const lv=machineLevel(lineId,stageKey);
+    const lvMult=1/(1+(lv-1)*0.18);
+    return def.time*lvMult*ResearchSystem.stageTimeMult();
+  },
+  defectChance(lineId,stageKey){
+    const lv=machineLevel(lineId,stageKey);
+    const base=0.10/(1+(lv-1)*0.4);
+    return base*ResearchSystem.defectMult();
+  },
+  tick(dt){
+    G.lines.forEach(line=>{
+      const slots=line.slots;
+      // advance from last stage to first so a freed slot can be filled the same tick
+      for(let i=slots.length-1;i>=0;i--){
+        const car=slots[i];
+        if(!car) continue;
+        const st=STAGE_DEFS[i];
+        car.t += dt;
+        const need=this.stageTime(line.id,st.key);
+        if(car.t>=need){
+          // stage complete — roll defect
+          if(Math.random()<this.defectChance(line.id,st.key)){
+            car.quality=clamp(car.quality - ri(6,14),5,100);
+          }
+          if(i===slots.length-1){
+            // shipping done -> sell
+            this.finishCar(car);
+            slots[i]=null;
+          } else if(!slots[i+1]){
+            slots[i+1]=car; slots[i]=null; car.t=0;
+          } // else blocked, wait
+        }
+      }
+      // feed new car into first stage
+      if(!slots[0]){
+        const cat=G.design.category;
+        if(Supply.canConsume(cat)){
+          Supply.consume(cat);
+          const car={
+            id:this.carSeq++, category:cat,
+            quality:clamp(G.design.qualityTarget+ResearchSystem.qualityBonus()+ri(-4,4),5,100),
+            cost:Supply.carCost(cat), t:0, mesh:Factory.acquireCar(cat)
+          };
+          slots[0]=car; G.stats.carsBuilt++;
+        }
+      }
+    });
+  },
+  // place car instance at its current stage position (called each render frame for smoothness)
+  syncPositions(){
+    G.lines.forEach((line,li)=>{
+      const anchors=Factory.lineAnchors[li]; if(!anchors) return;
+      line.slots.forEach((car,si)=>{
+        if(!car||!car.mesh) return;
+        const a=anchors[si];
+        const need=this.stageTime(line.id,STAGE_DEFS[si].key);
+        const prog=clamp(car.t/need,0,1);
+        // slide within the stage toward next anchor for a sense of motion
+        const nx = (si<anchors.length-1)?anchors[si+1].x:a.x+5;
+        car.mesh.position.x = lerp(a.x, nx, prog*0.45);
+        car.mesh.position.y = 0.05;
+        car.mesh.position.z = a.z+1.6;
+        car.mesh.rotation.y = Math.PI/2;
+      });
+    });
+  },
+  finishCar(car){
+    Factory.releaseCar(car.mesh); car.mesh=null;
+    Economy.sellCar(car);
+  }
+};
+
+/* ====================================================================================
+   ECONOMY SYSTEM  —  dynamic market, pricing, profit, valuation, loans
+   ==================================================================================== */
+const Economy = {
+  earn(v){ G.cash+=v; G.profit.windowRev+=v; G.stats.revenue+=v; },
+  spend(v){ G.profit.windowCost+=v; },
+  sellCar(car){
+    const cm=CAT_META[car.category], mk=G.market[car.category];
+    const qFactor = 0.55 + (car.quality/100)*0.9;       // quality 0..100 -> 0.55..1.45
+    const repFactor = 0.7 + (G.reputation/100)*0.6;     // rep -> 0.7..1.3
+    const satFactor = clamp(1 - mk.sat*0.5, 0.45, 1.0);  // saturation discount
+    const price = mk.price * qFactor * repFactor * satFactor * ResearchSystem.sellMult();
+    const profit = price - car.cost;
+    this.earn(price);
+    G.stats.carsSold++;
+    mk.sat = clamp(mk.sat + 0.05, 0, 1.6);               // each sale saturates market a bit
+    // reputation drifts toward quality
+    G.reputation = clamp(G.reputation + (car.quality-G.reputation)*0.01 + (profit>0?0.02:-0.04), 1, 100);
+    G.lastSale={cat:car.category, price, profit, q:car.quality};
+  },
+  tickMarket(){
+    // economy state transitions
+    const e=G.economy; e.timer--;
+    if(e.timer<=0){
+      const roll=Math.random();
+      e.state = roll<0.25?'recession': roll<0.7?'stable':'boom';
+      e.timer = ri(70,140);
+      e.demandMult = e.state==='boom'?1.3 : e.state==='recession'?0.7 : 1.0;
+      UI.toast('Market shift: '+e.state.toUpperCase(),
+        e.state==='boom'?'good':e.state==='recession'?'bad':'warn');
+    }
+    // price equilibrium per category
+    CATS.forEach(c=>{
+      const mk=G.market[c], meta=CAT_META[c];
+      mk.sat = clamp(mk.sat*0.97 - 0.002, 0, 1.6);        // saturation decays
+      const demand = meta.baseDemand * e.demandMult;
+      // equilibrium: high demand & low saturation -> price rises toward 1.4x base
+      const targetMult = clamp(0.7 + demand*0.03 - mk.sat*0.35, 0.55, 1.45);
+      const target = meta.basePrice*targetMult;
+      mk.price = lerp(mk.price, target, 0.06);
+      mk.demand = demand;
+    });
+  },
+  tickProfit(now){
+    if(now - G.profit.lastReset >= 60){
+      G.profit.ppm = G.profit.windowRev - G.profit.windowCost;
+      G.profit.windowRev=0; G.profit.windowCost=0; G.profit.lastReset=now;
+    }
+  },
+  tickDebt(){
+    if(G.debt>0){
+      const interest=G.debt*0.0005;  // per second (~3%/min)
+      G.debt+=interest;
+    }
+  },
+  valuation(){
+    let assets=G.cash;
+    assets += G.lines.length*120000;
+    assets += G.factory.sizeIdx*250000;
+    assets += (G.reputation-50)*4000;
+    assets += Object.values(G.resources).reduce((s,r)=>s+r.amt*r.price,0);
+    assets += Object.keys(G.research.unlocked).length*60000;
+    return assets - G.debt;
+  },
+  takeLoan(amt){ G.cash+=amt; G.debt+=amt; UI.toast('Loan +'+fmtMoney(amt),'warn'); },
+  repay(amt){ amt=Math.min(amt,G.debt,G.cash); if(amt<=0){UI.toast('Nothing to repay','warn');return;} G.cash-=amt; G.debt-=amt; UI.toast('Repaid '+fmtMoney(amt),'good'); }
+};
+
+/* ====================================================================================
+   AI SYSTEM  —  competitor companies
+   ==================================================================================== */
+const AISys = {
+  tick(){
+    let shareSum=0;
+    G.ai.forEach(a=>{
+      const mk=G.market[a.focus], meta=CAT_META[a.focus];
+      // production scaled by strategy & economy
+      const out = a.prod * (G.economy.state==='boom'?1.3:G.economy.state==='recession'?0.7:1) ;
+      // they saturate their focus market
+      mk.sat = clamp(mk.sat + out*0.012, 0, 1.6);
+      // pricing strategy affects their rep & cash
+      if(a.strat==='aggressive'){ a.share+=0.0008; a.rep=clamp(a.rep-0.01,30,90); a.cash+=out*8000; mk.price*=0.999; }
+      else if(a.strat==='premium'){ a.rep=clamp(a.rep+0.02,30,95); a.share+=0.0003; a.cash+=out*16000; }
+      else { a.rep=clamp(a.rep+0.005,30,92); a.share+=0.0005; a.cash+=out*11000; }
+      // expand factory occasionally
+      if(a.cash>800000 && Math.random()<0.01){ a.prod+=0.15; a.cash-=400000; a.share+=0.01; }
+      a.share=clamp(a.share,0.02,0.5);
+      shareSum+=a.share;
+    });
+    // player's share is the remainder, influenced by reputation & sales
+    G._playerShare = clamp(1-shareSum,0.02,0.7);
+    // normalise if AI overflow
+    if(shareSum>0.92){ const k=0.92/shareSum; G.ai.forEach(a=>a.share*=k); }
+  }
+};
+
+/* ====================================================================================
+   FACTORY EXPANSION
+   ==================================================================================== */
+const Expansion = {
+  lineCost(){ const base=180000*Math.pow(1.7,G.lines.length-1); return Math.round(base*(ResearchSystem.has('megafac')?0.7:1)); },
+  addLine(){
+    const c=this.lineCost();
+    if(G.cash<c){ UI.toast('Need '+fmtMoney(c)+' for new line','bad'); return; }
+    if(G.lines.length>=6){ UI.toast('Max lines in this factory','warn'); return; }
+    G.cash-=c; Economy.spend(c);
+    G.lines.push(makeLine(G.lines.length));
+    Factory.buildProductionLines();
+    UI.toast('New production line built!','good');
+  },
+  warehouseCost(){ return Math.round(80000*Math.pow(1.6,G.factory.warehouseMult-1)); },
+  expandWarehouse(){
+    const c=this.warehouseCost();
+    if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); return; }
+    G.cash-=c; Economy.spend(c); G.factory.warehouseMult++;
+    for(const k in G.resources){ G.resources[k].cap=Math.round(G.resources[k].cap*1.4); }
+    UI.toast('Warehouse expanded','good');
+  },
+  sizeCost(){ const base=[0,500000,1500000,5000000,15000000][G.factory.sizeIdx+1]||Infinity;
+    return Math.round(base*(ResearchSystem.has('megafac')?0.75:1)); },
+  upgradeSize(){
+    if(G.factory.sizeIdx>=SIZES.length-1){ UI.toast('Already a Global Empire!','good'); return; }
+    if(G.factory.sizeIdx>=2 && !ResearchSystem.has('megafac')){ UI.toast('Research Mega Factory first','warn'); return; }
+    const c=this.sizeCost();
+    if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); return; }
+    G.cash-=c; Economy.spend(c); G.factory.sizeIdx++;
+    G.reputation=clamp(G.reputation+3,1,100);
+    UI.toast('Factory upgraded to '+SIZES[G.factory.sizeIdx]+'!','good');
+  },
+  buildSecondFactory(){
+    if(G.factory.secondFactory){ UI.toast('Second factory already built','warn'); return; }
+    if(!ResearchSystem.has('megafac')){ UI.toast('Research Mega Factory first','warn'); return; }
+    const c=8000000;
+    if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); return; }
+    G.cash-=c; Economy.spend(c); G.factory.secondFactory=true;
+    // add two lines representing the new facility
+    G.lines.push(makeLine(G.lines.length)); G.lines.push(makeLine(G.lines.length));
+    Factory.buildProductionLines();
+    UI.toast('Second factory online! +2 lines','good');
+  }
+};
+
+/* ====================================================================================
+   MACHINE UPGRADES (physical, in-world)
+   ==================================================================================== */
+const Machines = {
+  upgradeCost(lineId,stageKey){ const lv=machineLevel(lineId,stageKey); return Math.round(20000*Math.pow(1.6,lv-1)); },
+  upgrade(lineId,stageKey){
+    const lv=machineLevel(lineId,stageKey);
+    if(lv>=8){ UI.toast('Machine at max level','warn'); return false; }
+    const c=this.upgradeCost(lineId,stageKey);
+    if(G.cash<c){ UI.toast('Need '+fmtMoney(c)+' to upgrade','bad'); return false; }
+    G.cash-=c; Economy.spend(c); setMachineLevel(lineId,stageKey,lv+1);
+    // grow the machine top a touch as feedback
+    const mm=Factory.machineMeshes[mlKey(lineId,stageKey)];
+    if(mm&&mm.top){ mm.top.scaling.y = 1+(lv)*0.08; }
+    UI.toast(STAGE_DEFS.find(s=>s.key===stageKey).name+' → Lv '+(lv+1),'good');
+    return true;
+  }
+};
+
+/* ====================================================================================
+   GAME LOOP  —  central deterministic 1s simulation tick + render-frame updates
+   ==================================================================================== */
+const Game = {
+  mode:'walk', acc:0, running:false, lastSave:0, animT:0,
+  start(){
+    Scene.init();
+    CameraSys.init();
+    Player.init();
+    Factory.build();
+    Input.init();
+    UI.init();
+    SaveSys.load();
+    Factory.buildProductionLines();   // rebuild to match loaded line count
+    this.running=true;
+
+    Scene.scene.registerBeforeRender(()=>{
+      const dt=Math.min(Scene.engine.getDeltaTime()/1000, 0.1);
+      this.animT+=dt;
+      Player.update(dt);
+      if(this.mode==='walk'){ CameraSys.update(dt); Interact.update(); }
+      Production.syncPositions();
+      this.animateWorld(dt);
+      // fixed 1s simulation
+      this.acc+=dt;
+      while(this.acc>=1){ this.acc-=1; this.simTick(); }
+    });
+    Scene.engine.runRenderLoop(()=>{ Scene.scene.render(); });
+    window.addEventListener('resize',()=>Scene.engine.resize());
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) Scene.engine.resize(); });
+  },
+
+  simTick(){
+    G.stats.time++;
+    Production.tick(1);
+    Supply.tickPrices();
+    Supply.tickContracts();
+    Supply.autoRestock();
+    Economy.tickMarket();
+    Economy.tickDebt();
+    AISys.tick();
+    G.researchPoints += this.rpRate();
+    Economy.tickProfit(G.stats.time);
+    G.valuation=Economy.valuation();
+    // bankruptcy guard
+    if(G.cash<0 && G.debt<=0){ /* allow negative briefly */ }
+    UI.refreshHud();
+    if(this.mode==='manage') UI.renderTab(UI.tab);   // live-update open panel
+    // autosave
+    if(G.stats.time - this.lastSave >= 45){ SaveSys.save(); this.lastSave=G.stats.time; }
+  },
+  rpRate(){ // research lab generation; scales with factory size + automation
+    return 0.4 + G.factory.sizeIdx*0.25 + G.factory.automation*0.3;
+  },
+
+  animateWorld(dt){
+    // machine arms bob, glow rings pulse, conveyor cars handled elsewhere
+    const t=this.animT;
+    for(const k in Factory.machineMeshes){
+      const mm=Factory.machineMeshes[k];
+      if(mm.arm){ mm.arm.rotation.x = Math.sin(t*2+mm.x)*0.3; }
+    }
+    if(Factory.labCore){ Factory.labCore.rotation.y += dt*1.2; }
+    // warehouse fill scaling
+    if(Factory.warehouseFills){
+      for(const r in Factory.warehouseFills){
+        const f=Factory.warehouseFills[r], res=G.resources[r];
+        const frac=clamp(res.amt/res.cap,0.05,1);
+        f.scaling.y=frac; f.position.y=0.2+frac*1.7;
+      }
+    }
+  },
+
+  toggleMode(){
+    if(this.mode==='walk') this.enterManage(); else this.enterWalk();
+  },
+  enterManage(){
+    this.mode='manage';
+    CameraSys.enterManage();
+    document.getElementById('mgmt').style.display='flex';
+    document.getElementById('joyZone').style.display='none';
+    document.getElementById('lookpad').style.display='none';
+    document.getElementById('interactWrap').style.display='none';
+    document.getElementById('modeBtn').textContent='🚶 WALK';
+    UI.renderTab(UI.tab);
+  },
+  enterWalk(){
+    this.mode='walk';
+    CameraSys.enterWalk();
+    document.getElementById('mgmt').style.display='none';
+    document.getElementById('joyZone').style.display='block';
+    document.getElementById('lookpad').style.display='block';
+    document.getElementById('modeBtn').textContent='🏭 MANAGE';
+  }
+};
+
+/* ====================================================================================
+   INTERACTION  —  proximity detection + context actions (walk mode)
+   ==================================================================================== */
+const Interact = {
+  current:null,
+  update(){
+    const p=Player.mesh.position;
+    let best=null, bestD=Infinity;
+    for(const it of Factory.interactables){
+      const dx=it.pos.x-p.x, dz=it.pos.z-p.z;
+      const d=dx*dx+dz*dz;
+      if(d < it.radius*it.radius && d<bestD){ best=it; bestD=d; }
+    }
+    if(best!==this.current){
+      // clear old glow
+      if(this.current&&this.current.mesh) this.current.mesh.visibility=0;
+      this.current=best;
+      if(best&&best.mesh) best.mesh.visibility=1;
+      this.renderPrompt();
+    }
+    if(this.current&&this.current.mesh){
+      this.current.mesh.visibility = 0.4+0.4*Math.sin(Game.animT*4);
+    }
+  },
+  renderPrompt(){
+    const wrap=document.getElementById('interactWrap');
+    if(!this.current){ wrap.style.display='none'; return; }
+    wrap.style.display='flex';
+    document.getElementById('interactName').textContent=this.current.name;
+    const up=document.getElementById('btnUpgrade');
+    up.textContent = this.current.type==='machine'?'Upgrade':'Open';
+  },
+  inspect(){
+    const it=this.current; if(!it) return;
+    if(it.type==='machine'){
+      const {lineId,stageKey}=it.data;
+      const lv=machineLevel(lineId,stageKey);
+      const st=STAGE_DEFS.find(s=>s.key===stageKey);
+      UI.toast(st.name+' · Lv '+lv+' · '+Production.stageTime(lineId,stageKey).toFixed(1)+'s · defect '+(Production.defectChance(lineId,stageKey)*100).toFixed(1)+'%','warn');
+    } else if(it.type==='warehouse'){ Game.enterManage(); UI.openTab('economy'); }
+    else if(it.type==='research'){ Game.enterManage(); UI.openTab('research'); }
+    else if(it.type==='shipping'){ Game.enterManage(); UI.openTab('economy'); }
+  },
+  action(){ // primary button
+    const it=this.current; if(!it) return;
+    if(it.type==='machine'){ Machines.upgrade(it.data.lineId,it.data.stageKey); }
+    else if(it.type==='warehouse'){ Game.enterManage(); UI.openTab('economy'); }
+    else if(it.type==='research'){ Game.enterManage(); UI.openTab('research'); }
+    else if(it.type==='shipping'){ Game.enterManage(); UI.openTab('company'); }
+  }
+};
+
+/* ====================================================================================
+   INPUT  —  joystick (left) + look pad (right) + keyboard + long-press
+   ==================================================================================== */
+const Input = {
+  joyId:null, joyOrigin:{x:0,y:0}, lookId:null, lookLast:{x:0,y:0},
+  pressTimer:null, moved:false,
+  init(){
+    const joyZone=document.getElementById('joyZone');
+    const joyBase=document.getElementById('joyBase');
+    const joyKnob=document.getElementById('joyKnob');
+    const R=58;
+
+    joyZone.addEventListener('pointerdown',e=>{
+      if(this.joyId!==null) return;
+      this.joyId=e.pointerId; joyZone.setPointerCapture(e.pointerId);
+      this.joyOrigin={x:e.clientX,y:e.clientY};
+      joyBase.style.display='block';
+      joyBase.style.left=(e.clientX-65)+'px'; joyBase.style.top=(e.clientY-65)+'px';
+      joyKnob.style.left='65px'; joyKnob.style.top='65px';
+      e.preventDefault();
+    });
+    joyZone.addEventListener('pointermove',e=>{
+      if(e.pointerId!==this.joyId) return;
+      let dx=e.clientX-this.joyOrigin.x, dy=e.clientY-this.joyOrigin.y;
+      const mag=Math.hypot(dx,dy);
+      if(mag>R){ dx=dx/mag*R; dy=dy/mag*R; }
+      joyKnob.style.left=(65+dx)+'px'; joyKnob.style.top=(65+dy)+'px';
+      Player.joy.x=dx/R; Player.joy.y=-dy/R;
+      e.preventDefault();
+    });
+    const endJoy=e=>{ if(e.pointerId!==this.joyId) return;
+      this.joyId=null; Player.joy.x=0; Player.joy.y=0; joyBase.style.display='none'; };
+    joyZone.addEventListener('pointerup',endJoy);
+    joyZone.addEventListener('pointercancel',endJoy);
+
+    // look pad
+    const look=document.getElementById('lookpad');
+    look.addEventListener('pointerdown',e=>{
+      if(this.lookId!==null) return;
+      this.lookId=e.pointerId; look.setPointerCapture(e.pointerId);
+      this.lookLast={x:e.clientX,y:e.clientY};
+      e.preventDefault();
+    });
+    look.addEventListener('pointermove',e=>{
+      if(e.pointerId!==this.lookId) return;
+      const dx=e.clientX-this.lookLast.x, dy=e.clientY-this.lookLast.y;
+      this.lookLast={x:e.clientX,y:e.clientY};
+      CameraSys.look(dx,dy);
+      e.preventDefault();
+    });
+    const endLook=e=>{ if(e.pointerId!==this.lookId) return; this.lookId=null; };
+    look.addEventListener('pointerup',endLook);
+    look.addEventListener('pointercancel',endLook);
+
+    // mode toggle
+    document.getElementById('modeBtn').addEventListener('click',()=>Game.toggleMode());
+
+    // interact buttons (tap = action, long-press inspect handled below)
+    const btnUp=document.getElementById('btnUpgrade');
+    const btnIn=document.getElementById('btnInspect');
+    btnUp.addEventListener('click',()=>Interact.action());
+    btnIn.addEventListener('click',()=>Interact.inspect());
+    // long-press on the upgrade button => inspect (per spec: long press = upgrade/inspect)
+    btnUp.addEventListener('pointerdown',()=>{ this.pressTimer=setTimeout(()=>{ Interact.inspect(); this.pressTimer=null; },550); });
+    const cancelPress=()=>{ if(this.pressTimer){ clearTimeout(this.pressTimer); this.pressTimer=null; } };
+    btnUp.addEventListener('pointerup',cancelPress);
+    btnUp.addEventListener('pointerleave',cancelPress);
+
+    // keyboard (desktop dev)
+    window.addEventListener('keydown',e=>{ Player.keys[e.key]=true;
+      if(e.key==='Tab'){ e.preventDefault(); Game.toggleMode(); }
+      if(e.key==='e'||e.key==='E') Interact.action();
+      if(e.key==='q'||e.key==='Q') Interact.inspect();
+    });
+    window.addEventListener('keyup',e=>{ Player.keys[e.key]=false; });
+    // mouse-drag look on desktop (pointer events already cover it via lookpad)
+  }
+};
+
+/* ====================================================================================
+   UI SYSTEM  —  HUD + management panels (vanilla DOM)
+   ==================================================================================== */
+const UI = {
+  tab:'dashboard',
+  init(){
+    document.querySelectorAll('.nav').forEach(n=>{
+      n.addEventListener('click',()=>this.openTab(n.dataset.tab));
+    });
+    document.getElementById('panelClose').addEventListener('click',()=>Game.enterWalk());
+  },
+  openTab(t){
+    this.tab=t;
+    document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.tab===t));
+    if(Game.mode!=='manage') Game.enterManage();
+    this.renderTab(t);
+  },
+  refreshHud(){
+    document.getElementById('hudCash').textContent=fmtMoney(G.cash);
+    const ppm=document.getElementById('hudPpm'); ppm.textContent=fmtMoney(G.profit.ppm);
+    ppm.className='v '+(G.profit.ppm>=0?'good':'bad');
+    document.getElementById('hudRep').textContent=Math.round(G.reputation);
+    const ec=document.getElementById('hudEcon'); ec.textContent=G.economy.state.toUpperCase();
+    ec.className='pill '+G.economy.state;
+  },
+  // ---- toast log ----
+  toast(msg,type){
+    const box=document.getElementById('toast');
+    const el=document.createElement('div'); el.className='toastItem '+(type||'');
+    el.textContent=msg; box.appendChild(el);
+    requestAnimationFrame(()=>el.classList.add('show'));
+    setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),300); },2600);
+    while(box.children.length>4) box.removeChild(box.firstChild);
+  },
+  // ---- panel rendering ----
+  renderTab(t){
+    document.getElementById('panelTitle').textContent={
+      dashboard:'Dashboard',factory:'Factory',design:'Car Design',
+      economy:'Economy & Supply',research:'Research',company:'Company'}[t]||'';
+    const b=document.getElementById('panelBody');
+    b.innerHTML=this['tab_'+t]?this['tab_'+t]():'';
+    this['bind_'+t]&&this['bind_'+t]();
+  },
+
+  /* ---------------- DASHBOARD ---------------- */
+  tab_dashboard(){
+    const inProd=G.lines.reduce((s,l)=>s+l.slots.filter(x=>x).length,0);
+    const ls=G.lastSale;
+    return `
+    <div class="card">
+      <div class="row"><span class="k">Cash</span><span class="vv">${fmtMoney(G.cash)}</span></div>
+      <div class="row"><span class="k">Profit / min</span><span class="vv ${G.profit.ppm>=0?'':'bad'}" style="color:${G.profit.ppm>=0?'var(--good)':'var(--bad)'}">${fmtMoney(G.profit.ppm)}</span></div>
+      <div class="row"><span class="k">Company valuation</span><span class="vv">${fmtMoney(G.valuation)}</span></div>
+      <div class="row"><span class="k">Debt</span><span class="vv" style="color:${G.debt>0?'var(--warn)':'var(--muted)'}">${fmtMoney(G.debt)}</span></div>
+      <div class="row"><span class="k">Reputation</span><span class="vv">${Math.round(G.reputation)}/100</span></div>
+      <div class="bar"><i style="width:${G.reputation}%"></i></div>
+    </div>
+    <div class="card">
+      <h3>Production Overview</h3>
+      <div class="row"><span class="k">Active lines</span><span class="vv">${G.lines.length}</span></div>
+      <div class="row"><span class="k">Cars on lines</span><span class="vv">${inProd}</span></div>
+      <div class="row"><span class="k">Total built</span><span class="vv">${fmtInt(G.stats.carsBuilt)}</span></div>
+      <div class="row"><span class="k">Total sold</span><span class="vv">${fmtInt(G.stats.carsSold)}</span></div>
+      <div class="row"><span class="k">Lifetime revenue</span><span class="vv">${fmtMoney(G.stats.revenue)}</span></div>
+      <div class="row"><span class="k">Factory size</span><span class="vv">${SIZES[G.factory.sizeIdx]}</span></div>
+    </div>
+    <div class="card">
+      <h3>Market</h3>
+      <div class="row"><span class="k">Economy</span><span class="vv pill ${G.economy.state}" >${G.economy.state.toUpperCase()}</span></div>
+      <div class="row"><span class="k">Your est. market share</span><span class="vv">${((G._playerShare||0.1)*100).toFixed(1)}%</span></div>
+      ${ls?`<div class="row"><span class="k">Last sale</span><span class="vv">${CAT_META[ls.cat].name} ${fmtMoney(ls.price)} (${ls.profit>=0?'+':''}${fmtMoney(ls.profit)})</span></div>`:''}
+    </div>
+    <div class="small" style="text-align:center;padding:6px">Tip: tap 🚶 WALK and explore your factory. Walk up to machines to upgrade them.</div>`;
+  },
+
+  /* ---------------- FACTORY ---------------- */
+  tab_factory(){
+    let html='';
+    G.lines.forEach((line,li)=>{
+      html+=`<div class="card"><h3>Production Line ${li+1}</h3>`;
+      STAGE_DEFS.forEach(st=>{
+        const lv=machineLevel(line.id,st.key);
+        const time=Production.stageTime(line.id,st.key).toFixed(1);
+        const def=(Production.defectChance(line.id,st.key)*100).toFixed(1);
+        const cost=Machines.upgradeCost(line.id,st.key);
+        const car=line.slots[STAGE_DEFS.indexOf(st)];
+        html+=`<div class="row">
+          <span class="k">${st.name} <span class="tag">Lv ${lv}</span>${car?'<span class="tag on">●working</span>':''}</span>
+          <button class="btn" style="width:auto;padding:7px 10px" data-up="${line.id}|${st.key}" ${G.cash<cost||lv>=8?'disabled':''}>
+            ${lv>=8?'MAX':'⬆ '+fmtMoney(cost)}</button></div>
+          <div class="small">${time}s · defect ${def}%</div>`;
+      });
+      html+='</div>';
+    });
+    html+=`<button class="btn alt" id="addLineBtn">➕ Build Production Line — ${fmtMoney(Expansion.lineCost())}</button>`;
+    return html;
+  },
+  bind_factory(){
+    document.querySelectorAll('[data-up]').forEach(btn=>{
+      btn.addEventListener('click',()=>{ const [l,k]=btn.dataset.up.split('|');
+        if(Machines.upgrade(parseInt(l),k)) this.renderTab('factory'); });
+    });
+    const add=document.getElementById('addLineBtn');
+    if(add) add.addEventListener('click',()=>{ Expansion.addLine(); this.renderTab('factory'); });
+  },
+
+  /* ---------------- DESIGN ---------------- */
+  tab_design(){
+    const d=G.design;
+    const cost=Supply.carCost(d.category);
+    const mk=G.market[d.category];
+    const evOk=ResearchSystem.evUnlocked();
+    const qBonus=ResearchSystem.qualityBonus();
+    const estPrice = mk.price*(0.55+(clamp(d.qualityTarget+qBonus,5,100)/100)*0.9)*(0.7+G.reputation/100*0.6)*ResearchSystem.sellMult();
+    const eff = clamp(120 - d.weight*0.6 - d.enginePower*0.3 + (d.category==='electric'?20:0),5,100);
+    let seg='';
+    CATS.forEach(c=>{
+      const locked = c==='electric'&&!evOk;
+      seg+=`<button class="${d.category===c?'sel':''}" data-cat="${c}" ${locked?'disabled style="opacity:.4"':''}>${CAT_META[c].name}${locked?' 🔒':''}</button>`;
+    });
+    return `
+    <div class="card">
+      <h3>Vehicle Category</h3>
+      <div class="seg">${seg}</div>
+      ${!evOk?'<div class="small">Electric unlocks via Research → EV Platform.</div>':''}
+    </div>
+    <div class="card">
+      <h3>Specifications</h3>
+      <div class="row"><span class="k">Engine Power</span><span class="vv">${d.enginePower}</span></div>
+      <input type="range" min="10" max="100" value="${d.enginePower}" data-spec="enginePower">
+      <div class="row"><span class="k">Weight</span><span class="vv">${d.weight}</span></div>
+      <input type="range" min="20" max="100" value="${d.weight}" data-spec="weight">
+      <div class="row"><span class="k">Quality Target</span><span class="vv">${d.qualityTarget}${qBonus?' (+'+qBonus+')':''}</span></div>
+      <input type="range" min="20" max="100" value="${d.qualityTarget}" data-spec="qualityTarget">
+    </div>
+    <div class="card">
+      <h3>Live Preview — ${CAT_META[d.category].name}</h3>
+      <div class="row"><span class="k">Production cost / unit</span><span class="vv">${fmtMoney(cost)}</span></div>
+      <div class="row"><span class="k">Est. sale price</span><span class="vv">${fmtMoney(estPrice)}</span></div>
+      <div class="row"><span class="k">Est. margin / unit</span><span class="vv" style="color:${estPrice-cost>=0?'var(--good)':'var(--bad)'}">${fmtMoney(estPrice-cost)}</span></div>
+      <div class="row"><span class="k">Efficiency rating</span><span class="vv">${Math.round(eff)}/100</span></div>
+      <div class="row"><span class="k">Market demand</span><span class="vv">${mk.demand.toFixed(1)} /min</span></div>
+      <div class="small">New cars entering the line use these specs. Higher quality lifts price & reputation but costs more.</div>
+    </div>`;
+  },
+  bind_design(){
+    document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{
+      if(b.disabled) return; G.design.category=b.dataset.cat; this.renderTab('design'); }));
+    document.querySelectorAll('[data-spec]').forEach(inp=>{
+      inp.addEventListener('input',()=>{ G.design[inp.dataset.spec]=parseInt(inp.value); this.renderTab('design'); });
+    });
+  },
+
+  /* ---------------- ECONOMY & SUPPLY ---------------- */
+  tab_economy(){
+    let res='';
+    for(const k in G.resources){
+      const r=G.resources[k];
+      const trend = r.price>r.base*1.05?'▲':r.price<r.base*0.95?'▼':'▬';
+      const tc = r.price>r.base*1.05?'var(--bad)':r.price<r.base*0.95?'var(--good)':'var(--muted)';
+      res+=`<div class="card">
+        <div class="row"><span class="k">${k.toUpperCase()}</span>
+          <span class="vv">${fmtMoney(r.price)} <span style="color:${tc}">${trend}</span></span></div>
+        <div class="bar"><i style="width:${clamp(r.amt/r.cap*100,0,100)}%"></i></div>
+        <div class="row"><span class="small">${fmtInt(r.amt)} / ${fmtInt(r.cap)} units</span></div>
+        <div class="grid3">
+          <button class="btn" data-buy="${k}|50">Buy 50</button>
+          <button class="btn" data-buy="${k}|200">Buy 200</button>
+          <button class="btn alt" data-contract="${k}">Contract</button>
+        </div>
+      </div>`;
+    }
+    let comp='<div class="card"><h3>Competitors</h3>';
+    G.ai.forEach(a=>{ comp+=`<div class="row"><span class="k">${a.name} <span class="small">(${a.strat}, ${CAT_META[a.focus].name})</span></span>
+      <span class="vv">${(a.share*100).toFixed(1)}% · rep ${Math.round(a.rep)}</span></div>`; });
+    comp+=`<div class="row"><span class="k" style="color:var(--acc)">YOU</span><span class="vv" style="color:var(--acc)">${((G._playerShare||0.1)*100).toFixed(1)}% · rep ${Math.round(G.reputation)}</span></div></div>`;
+
+    let mkt='<div class="card"><h3>Car Market Prices</h3>';
+    CATS.forEach(c=>{ const mk=G.market[c];
+      mkt+=`<div class="row"><span class="k">${CAT_META[c].name}</span>
+      <span class="vv">${fmtMoney(mk.price)} <span class="small">dem ${mk.demand.toFixed(1)} · sat ${(mk.sat*100).toFixed(0)}%</span></span></div>`; });
+    mkt+='</div>';
+
+    let con='';
+    if(G.contracts.length){
+      con='<div class="card"><h3>Active Contracts</h3>';
+      G.contracts.forEach(c=>{ con+=`<div class="row"><span class="k">${c.res} @ ${fmtMoney(c.price)}</span><span class="vv">${c.qtyPerMin}/min · ${c.ticksLeft}s left</span></div>`; });
+      con+='</div>';
+    }
+    return `<div class="card"><div class="row"><span class="k">Economy state</span><span class="vv pill ${G.economy.state}">${G.economy.state.toUpperCase()}</span></div>
+      <div class="small">Resource prices fluctuate globally. Lock supply with contracts to hedge against scarcity.</div></div>`
+      + res + con + mkt + comp;
+  },
+  bind_economy(){
+    document.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>{
+      const [r,q]=b.dataset.buy.split('|'); Supply.buy(r,parseInt(q)); this.renderTab('economy'); }));
+    document.querySelectorAll('[data-contract]').forEach(b=>b.addEventListener('click',()=>{
+      Supply.signContract(b.dataset.contract, 600, 120); this.renderTab('economy'); }));
+  },
+
+  /* ---------------- RESEARCH ---------------- */
+  tab_research(){
+    const tiers={}; Object.keys(TECH).forEach(id=>{ const t=TECH[id]; (tiers[t.tier]=tiers[t.tier]||[]).push(id); });
+    let cols='';
+    Object.keys(tiers).sort().forEach(tier=>{
+      cols+='<div class="techCol">';
+      tiers[tier].forEach(id=>{
+        const t=TECH[id]; const done=ResearchSystem.has(id); const avail=ResearchSystem.available(id);
+        const cls=done?'done':avail?'avail':'lock';
+        const depTxt = t.deps.length?('Needs: '+t.deps.map(d=>TECH[d].name).join(', ')):'';
+        cols+=`<div class="techNode ${cls}">
+          <h4>${t.name} ${done?'<span class="tag on">✓</span>':''}</h4>
+          <div class="desc">${t.desc}</div>
+          ${done?'<div class="small">Researched</div>':
+            `<button class="btn" data-tech="${id}" ${avail&&G.researchPoints>=t.cost?'':'disabled'}>${t.cost} RP</button>
+             ${depTxt?`<div class="small">${depTxt}</div>`:''}`}
+        </div>`;
+      });
+      cols+='</div>';
+    });
+    return `<div class="card"><div class="row"><span class="k">Research Points</span><span class="vv" style="color:var(--acc2)">${G.researchPoints.toFixed(0)} RP</span></div>
+      <div class="small">Generating ${Game.rpRate().toFixed(2)} RP/s from your research lab. Walk into the lab dome to open this tab quickly.</div></div>
+      <div id="techGrid">${cols}</div>`;
+  },
+  bind_research(){
+    document.querySelectorAll('[data-tech]').forEach(b=>b.addEventListener('click',()=>{
+      if(ResearchSystem.unlock(b.dataset.tech)) this.renderTab('research'); }));
+  },
+
+  /* ---------------- COMPANY ---------------- */
+  tab_company(){
+    const sizeNext = G.factory.sizeIdx<SIZES.length-1? SIZES[G.factory.sizeIdx+1]:null;
+    return `
+    <div class="card">
+      <h3>Empire</h3>
+      <div class="row"><span class="k">Factory size</span><span class="vv">${SIZES[G.factory.sizeIdx]}</span></div>
+      <div class="row"><span class="k">Production lines</span><span class="vv">${G.lines.length}</span></div>
+      <div class="row"><span class="k">Automation level</span><span class="vv">${G.factory.automation}</span></div>
+      <div class="row"><span class="k">Second factory</span><span class="vv">${G.factory.secondFactory?'✓ Online':'—'}</span></div>
+      <div class="row"><span class="k">Valuation</span><span class="vv">${fmtMoney(G.valuation)}</span></div>
+    </div>
+    <div class="card">
+      <h3>Expansion</h3>
+      <button class="btn alt" id="cAddLine">➕ Production Line — ${fmtMoney(Expansion.lineCost())}</button>
+      <div style="height:8px"></div>
+      <button class="btn" id="cWarehouse">📦 Expand Warehouse (×1.4 cap) — ${fmtMoney(Expansion.warehouseCost())}</button>
+      <div style="height:8px"></div>
+      <button class="btn" id="cSize" ${sizeNext?'':'disabled'}>${sizeNext?'🏗️ Upgrade to '+sizeNext+' — '+fmtMoney(Expansion.sizeCost()):'Max size reached'}</button>
+      <div style="height:8px"></div>
+      <button class="btn warn" id="cSecond" ${G.factory.secondFactory?'disabled':''}>🏭 Build Second Factory — ${fmtMoney(8000000)}</button>
+      <div class="small">Mega/Global upgrades & the second factory require the Mega Factory research.</div>
+    </div>
+    <div class="card">
+      <h3>Finance — Loans</h3>
+      <div class="row"><span class="k">Current debt</span><span class="vv" style="color:${G.debt>0?'var(--warn)':'var(--muted)'}">${fmtMoney(G.debt)}</span></div>
+      <div class="grid2">
+        <button class="btn" id="loan250">Borrow ${fmtMoney(250000)}</button>
+        <button class="btn" id="loan1m">Borrow ${fmtMoney(1000000)}</button>
+      </div>
+      <div style="height:8px"></div>
+      <button class="btn ghost" id="repay">Repay ${fmtMoney(Math.min(G.debt,G.cash))}</button>
+      <div class="small">Interest accrues ~3%/min. Borrow to expand fast, but watch the debt.</div>
+    </div>
+    <div class="card">
+      <h3>Save</h3>
+      <div class="grid2">
+        <button class="btn ghost" id="saveNow">💾 Save now</button>
+        <button class="btn warn" id="resetGame">↺ Reset game</button>
+      </div>
+      <div class="small">Auto-saves every 45s to this device (localStorage).</div>
+    </div>`;
+  },
+  bind_company(){
+    const r=()=>this.renderTab('company');
+    const on=(id,fn)=>{ const el=document.getElementById(id); if(el) el.addEventListener('click',fn); };
+    on('cAddLine',()=>{ Expansion.addLine(); r(); });
+    on('cWarehouse',()=>{ Expansion.expandWarehouse(); r(); });
+    on('cSize',()=>{ Expansion.upgradeSize(); r(); });
+    on('cSecond',()=>{ Expansion.buildSecondFactory(); r(); });
+    on('loan250',()=>{ Economy.takeLoan(250000); r(); });
+    on('loan1m',()=>{ Economy.takeLoan(1000000); r(); });
+    on('repay',()=>{ Economy.repay(G.cash); r(); });
+    on('saveNow',()=>{ SaveSys.save(); UI.toast('Game saved','good'); });
+    on('resetGame',()=>{ if(confirm('Reset all progress?')){ SaveSys.reset(); } });
+  }
+};
+
+/* ====================================================================================
+   SAVE SYSTEM  —  localStorage
+   ==================================================================================== */
+const SaveSys = {
+  KEY:'autoworks_tycoon_save_v3',
+  save(){
+    try{
+      // strip mesh refs from cars before serialising
+      const clean=JSON.parse(JSON.stringify(G,(k,v)=> (k==='mesh')?undefined:v));
+      localStorage.setItem(this.KEY, JSON.stringify(clean));
+    }catch(e){ /* ignore quota */ }
+  },
+  load(){
+    try{
+      const raw=localStorage.getItem(this.KEY);
+      if(!raw) return false;
+      const data=JSON.parse(raw);
+      if(!data||data.version!==3) return false;
+      // merge into fresh defaults to be safe with new fields
+      const base=freshState();
+      G=Object.assign(base,data);
+      // rebuild line slot meshes references (cars in-progress get fresh instances on next sync)
+      G.lines.forEach(line=>{ line.slots=line.slots.map(c=>{
+        if(c){ c.mesh=Factory.acquireCar(c.category); }
+        return c||null; }); });
+      UI.toast('Save loaded — welcome back!','good');
+      return true;
+    }catch(e){ return false; }
+  },
+  reset(){
+    localStorage.removeItem(this.KEY);
+    location.reload();
+  }
+};
+
+/* ====================================================================================
+   BOOT  —  load Babylon from CDN (with fallbacks), then enable the game
+   ==================================================================================== */
+function loadBabylon(srcs, cb){
+  (function next(i){
+    if(typeof BABYLON!=='undefined') return cb(true);
+    if(i>=srcs.length) return cb(false);
+    const s=document.createElement('script');
+    s.src=srcs[i]; s.async=false;
+    s.onload=()=>cb(typeof BABYLON!=='undefined');
+    s.onerror=()=>next(i+1);
+    document.head.appendChild(s);
+  })(0);
+}
+window.addEventListener('load',()=>{
+  const hint=document.getElementById('loadHint');
+  const startBtn=document.getElementById('startBtn');
+  startBtn.disabled=true;
+  loadBabylon([
+    'https://cdn.babylonjs.com/babylon.js',
+    'https://cdn.jsdelivr.net/npm/babylonjs/babylon.js',
+    'https://unpkg.com/babylonjs/babylon.js'
+  ], ok=>{
+    if(!ok || typeof BABYLON==='undefined'){
+      hint.textContent='Could not load the 3D engine — check your connection and reload.'; return;
+    }
+    hint.textContent='Engine ready · Babylon '+BABYLON.Engine.Version;
+    startBtn.disabled=false;
+    startBtn.addEventListener('click',()=>{
+      document.getElementById('intro').classList.add('hidden');
+      try{ Game.start(); Game.enterWalk(); UI.refreshHud(); }
+      catch(err){ alert('Error starting game: '+err.message); console.error(err); }
+    },{once:true});
+  });
+});
+</script>
+</body>
+</html>
