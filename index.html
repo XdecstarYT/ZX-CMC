@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="theme-color" content="#0c1018" />
+<meta name="theme-color" content="#0a0e16" />
 <title>AutoWorks Tycoon — Walkable Car Factory</title>
 <!-- Babylon.js (latest stable) is loaded with a multi-CDN fallback in the boot script below -->
 <style>
   :root{
-    --bg:#0c1018; --panel:#161d2b; --panel2:#1f2a3d; --line:#2a3650;
-    --txt:#e8eef7; --muted:#9fb0c8; --acc:#4ea1ff; --acc2:#37d6a6;
-    --warn:#ffb454; --bad:#ff5d6c; --good:#37d6a6; --gold:#ffd24a;
+    --bg:#0a0e16; --panel:#151d2c; --panel2:#1e2a3e; --line:#2b3a55;
+    --txt:#eaf1fb; --muted:#9bb0cd; --acc:#4ea1ff; --acc2:#37d6a6;
+    --warn:#ffb454; --bad:#ff5d6c; --good:#37d6a6; --gold:#ffd24a; --purple:#b78bff;
     --safe-b: env(safe-area-inset-bottom, 0px);
     --safe-t: env(safe-area-inset-top, 0px);
   }
@@ -23,80 +23,88 @@
     user-select:none; -webkit-user-select:none; touch-action:none; overscroll-behavior:none; }
   #renderCanvas{ position:fixed; inset:0; width:100%; height:100%; display:block; outline:none; touch-action:none; }
 
-  /* ---------- Look pad (right-side camera control) ---------- */
   #lookpad{ position:fixed; top:0; right:0; width:60%; height:100%; z-index:5; touch-action:none; }
-
-  /* ---------- Joystick ---------- */
-  #joyZone{ position:fixed; left:0; bottom:0; width:42%; height:55%; z-index:6; touch-action:none; }
-  #joyBase{ position:absolute; width:130px; height:130px; border-radius:50%;
-    background:rgba(20,28,44,.42); border:2px solid rgba(120,160,220,.35);
-    box-shadow:0 4px 20px rgba(0,0,0,.4); display:none; pointer-events:none; }
-  #joyKnob{ position:absolute; width:60px; height:60px; border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, #6fb6ff, #2f6fd0);
-    border:2px solid rgba(255,255,255,.5); box-shadow:0 3px 10px rgba(0,0,0,.5);
+  #joyZone{ position:fixed; left:0; bottom:0; width:45%; height:60%; z-index:6; touch-action:none; }
+  #joyBase{ position:absolute; width:132px; height:132px; border-radius:50%;
+    background:rgba(20,28,44,.40); border:2px solid rgba(120,160,220,.35);
+    box-shadow:0 4px 24px rgba(0,0,0,.5), inset 0 0 30px rgba(78,161,255,.15); display:none; pointer-events:none; }
+  #joyKnob{ position:absolute; width:62px; height:62px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #7cc0ff, #2f6fd0);
+    border:2px solid rgba(255,255,255,.6); box-shadow:0 3px 12px rgba(0,0,0,.6), 0 0 18px rgba(78,161,255,.5);
     transform:translate(-50%,-50%); pointer-events:none; }
 
-  /* ---------- Top HUD ---------- */
+  /* Top HUD */
   #topHud{ position:fixed; top:calc(8px + var(--safe-t)); left:8px; right:8px; z-index:20;
-    display:flex; gap:8px; align-items:center; pointer-events:none; flex-wrap:wrap; }
-  .stat{ background:rgba(16,22,34,.82); border:1px solid var(--line); border-radius:12px;
-    padding:6px 10px; font-size:13px; font-weight:600; pointer-events:auto; backdrop-filter:blur(6px);
-    display:flex; gap:6px; align-items:center; white-space:nowrap; }
-  .stat .lbl{ color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.04em;}
+    display:flex; gap:7px; align-items:center; pointer-events:none; flex-wrap:wrap; }
+  .stat{ background:rgba(13,19,30,.82); border:1px solid var(--line); border-radius:12px;
+    padding:6px 10px; font-size:13px; font-weight:600; pointer-events:auto; backdrop-filter:blur(8px);
+    display:flex; gap:6px; align-items:center; white-space:nowrap; box-shadow:0 2px 10px rgba(0,0,0,.3);}
+  .stat .lbl{ color:var(--muted); font-weight:500; font-size:10px; text-transform:uppercase; letter-spacing:.05em;}
   .stat .v{ color:var(--txt); }
   .stat .v.good{ color:var(--good);} .stat .v.bad{ color:var(--bad);}
-  .pill{ font-size:11px; padding:2px 8px; border-radius:20px; font-weight:700; }
-  .pill.boom{ background:rgba(55,214,166,.18); color:var(--good);}
-  .pill.stable{ background:rgba(78,161,255,.18); color:var(--acc);}
-  .pill.recession{ background:rgba(255,93,108,.18); color:var(--bad);}
+  .pill{ font-size:11px; padding:2px 8px; border-radius:20px; font-weight:800; letter-spacing:.03em;}
+  .pill.boom{ background:rgba(55,214,166,.2); color:var(--good);}
+  .pill.stable{ background:rgba(78,161,255,.2); color:var(--acc);}
+  .pill.recession{ background:rgba(255,93,108,.2); color:var(--bad);}
 
-  /* ---------- Mode toggle + interact ---------- */
   #modeBtn{ position:fixed; right:10px; top:calc(54px + var(--safe-t)); z-index:21;
     background:linear-gradient(180deg,#2f6fd0,#1c4f9e); color:#fff; border:none; border-radius:14px;
-    padding:12px 16px; font-size:14px; font-weight:800; box-shadow:0 5px 16px rgba(0,0,0,.45);
+    padding:12px 16px; font-size:14px; font-weight:800; box-shadow:0 5px 18px rgba(0,0,0,.5);
     pointer-events:auto; letter-spacing:.03em; }
   #modeBtn:active{ transform:scale(.96); }
+  #soundBtn{ position:fixed; right:10px; top:calc(106px + var(--safe-t)); z-index:21;
+    width:46px; height:46px; border-radius:12px; border:1px solid var(--line); background:rgba(13,19,30,.82);
+    color:var(--txt); font-size:20px; pointer-events:auto; box-shadow:0 4px 14px rgba(0,0,0,.4);}
+  #soundBtn:active{ transform:scale(.95);}
 
+  /* Minimap */
+  #minimap{ position:fixed; right:10px; bottom:calc(14px + var(--safe-b)); z-index:14;
+    width:140px; height:106px; border-radius:12px; border:1px solid var(--line);
+    background:rgba(10,14,22,.7); box-shadow:0 4px 16px rgba(0,0,0,.5); pointer-events:none; }
+
+  /* Objective banner */
+  #objBanner{ position:fixed; left:50%; transform:translateX(-50%); top:calc(8px + var(--safe-t)); z-index:15;
+    display:none; }
+  /* (objective shown in toast + dashboard; banner reserved) */
+
+  /* Interact */
   #interactWrap{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(26px + var(--safe-b));
-    z-index:20; display:none; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
-  #interactName{ background:rgba(16,22,34,.9); border:1px solid var(--line); border-radius:10px;
-    padding:6px 12px; font-size:13px; font-weight:700; color:var(--gold); }
+    z-index:20; display:none; flex-direction:column; align-items:center; gap:9px; pointer-events:none; width:max-content; }
+  #interactName{ background:rgba(13,19,30,.92); border:1px solid var(--line); border-radius:10px;
+    padding:6px 14px; font-size:13px; font-weight:800; color:var(--gold); box-shadow:0 3px 12px rgba(0,0,0,.4);}
   #interactBtns{ display:flex; gap:10px; pointer-events:auto; }
   .ibtn{ background:linear-gradient(180deg,#37d6a6,#1f9e78); color:#06231b; border:none; border-radius:14px;
-    padding:14px 20px; font-size:15px; font-weight:800; box-shadow:0 5px 16px rgba(0,0,0,.4); }
+    padding:14px 22px; font-size:15px; font-weight:800; box-shadow:0 5px 18px rgba(0,0,0,.45); }
   .ibtn.sec{ background:linear-gradient(180deg,#4ea1ff,#2f6fd0); color:#03203f; }
   .ibtn:active{ transform:scale(.95); }
 
-  /* ---------- Toast / log ---------- */
-  #toast{ position:fixed; left:50%; transform:translateX(-50%); top:calc(96px + var(--safe-t)); z-index:40;
+  /* Toast */
+  #toast{ position:fixed; left:50%; transform:translateX(-50%); top:calc(150px + var(--safe-t)); z-index:40;
     display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; width:92%; max-width:460px;}
-  .toastItem{ background:rgba(16,22,34,.94); border:1px solid var(--line); border-left:4px solid var(--acc);
-    border-radius:10px; padding:8px 12px; font-size:13px; max-width:100%; opacity:0; transform:translateY(-6px);
-    transition:opacity .25s, transform .25s; box-shadow:0 4px 14px rgba(0,0,0,.4);}
+  .toastItem{ background:rgba(13,19,30,.95); border:1px solid var(--line); border-left:4px solid var(--acc);
+    border-radius:10px; padding:8px 13px; font-size:13px; max-width:100%; opacity:0; transform:translateY(-6px);
+    transition:opacity .25s, transform .25s; box-shadow:0 4px 16px rgba(0,0,0,.5); font-weight:600;}
   .toastItem.show{ opacity:1; transform:translateY(0);}
   .toastItem.good{ border-left-color:var(--good);} .toastItem.bad{ border-left-color:var(--bad);}
-  .toastItem.warn{ border-left-color:var(--warn);}
+  .toastItem.warn{ border-left-color:var(--warn);} .toastItem.event{ border-left-color:var(--purple);}
 
-  /* ---------- Management overlay ---------- */
+  /* Management overlay */
   #mgmt{ position:fixed; inset:0; z-index:30; display:none; flex-direction:column; pointer-events:none; }
-  #mgmtScrim{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(8,11,18,.35), rgba(8,11,18,.78)); }
+  #mgmtScrim{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(6,9,14,.30), rgba(6,9,14,.80)); }
   #panelWrap{ position:relative; margin-top:auto; pointer-events:auto;
-    background:var(--bg); border-top:1px solid var(--line); border-radius:18px 18px 0 0;
-    max-height:72%; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.5); }
+    background:var(--bg); border-top:1px solid var(--line); border-radius:20px 20px 0 0;
+    max-height:74%; display:flex; flex-direction:column; box-shadow:0 -12px 44px rgba(0,0,0,.6); }
   #panelHead{ padding:14px 16px 6px; display:flex; align-items:center; justify-content:space-between; }
   #panelTitle{ font-size:18px; font-weight:800; }
-  #panelBody{ overflow-y:auto; -webkit-overflow-scrolling:touch; padding:6px 14px 14px; }
-  #navBar{ display:flex; border-top:1px solid var(--line); background:var(--panel);
-    padding-bottom:var(--safe-b); }
-  .nav{ flex:1; text-align:center; padding:10px 2px 12px; font-size:11px; color:var(--muted);
-    font-weight:600; pointer-events:auto; }
+  #panelBody{ overflow-y:auto; -webkit-overflow-scrolling:touch; padding:6px 14px 16px; }
+  #navBar{ display:flex; border-top:1px solid var(--line); background:var(--panel); padding-bottom:var(--safe-b); }
+  .nav{ flex:1; text-align:center; padding:10px 2px 12px; font-size:11px; color:var(--muted); font-weight:600; pointer-events:auto; }
   .nav .ic{ font-size:20px; display:block; line-height:1.1; }
   .nav.active{ color:var(--acc); }
-  .nav.active .ic{ filter:drop-shadow(0 0 6px rgba(78,161,255,.6)); }
+  .nav.active .ic{ filter:drop-shadow(0 0 7px rgba(78,161,255,.7)); }
 
-  /* ---------- Cards / generic UI ---------- */
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:10px; }
-  .card h3{ margin:0 0 8px; font-size:14px; }
+  .card h3{ margin:0 0 8px; font-size:14px; display:flex; align-items:center; gap:6px;}
   .row{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; font-size:13px;}
   .row .k{ color:var(--muted);} .row .vv{ font-weight:700;}
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -105,56 +113,74 @@
     padding:11px 12px; font-size:13px; font-weight:700; width:100%; }
   .btn.alt{ background:linear-gradient(180deg,#37d6a6,#1f9e78); color:#06231b;}
   .btn.warn{ background:linear-gradient(180deg,#ffb454,#d98a25); color:#3a2706;}
+  .btn.purple{ background:linear-gradient(180deg,#b78bff,#7d4fe0); color:#1a0b3a;}
   .btn.ghost{ background:transparent; border:1px solid var(--line); color:var(--txt);}
   .btn:disabled{ opacity:.4; }
   .btn:active{ transform:scale(.97); }
-  .small{ font-size:11px; color:var(--muted);}
+  .small{ font-size:11px; color:var(--muted); line-height:1.45;}
   .bar{ height:8px; border-radius:6px; background:var(--panel2); overflow:hidden; margin:5px 0;}
-  .bar > i{ display:block; height:100%; background:linear-gradient(90deg,#4ea1ff,#37d6a6); width:0%; }
+  .bar > i{ display:block; height:100%; background:linear-gradient(90deg,#4ea1ff,#37d6a6); width:0%; transition:width .3s;}
+  .bar.q > i{ background:linear-gradient(90deg,#ffb454,#37d6a6);}
   .tag{ display:inline-block; font-size:10px; padding:2px 7px; border-radius:10px; background:var(--panel2);
     color:var(--muted); font-weight:700; margin-left:6px;}
-  .tag.on{ background:rgba(55,214,166,.18); color:var(--good);}
-  .tag.lock{ background:rgba(255,93,108,.16); color:var(--bad);}
-  input[type=range]{ width:100%; accent-color:var(--acc); }
+  .tag.on{ background:rgba(55,214,166,.2); color:var(--good);}
+  .tag.lock{ background:rgba(255,93,108,.18); color:var(--bad);}
+  .tag.warn{ background:rgba(255,180,84,.18); color:var(--warn);}
+  input[type=range]{ width:100%; accent-color:var(--acc); height:26px;}
+  input[type=text]{ width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    border-radius:9px; padding:9px 11px; font-size:14px; font-weight:600;}
   .seg{ display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
-  .seg button{ flex:1; min-width:60px; padding:9px 4px; border-radius:10px; border:1px solid var(--line);
+  .seg button{ flex:1; min-width:56px; padding:9px 4px; border-radius:10px; border:1px solid var(--line);
     background:var(--panel2); color:var(--muted); font-weight:700; font-size:12px;}
   .seg button.sel{ background:var(--acc); color:#03203f; border-color:var(--acc);}
   .closeX{ background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px;
     width:34px; height:34px; font-size:18px; font-weight:800;}
+  .toggle{ display:flex; gap:8px; align-items:center;}
+  .toggle .sw{ width:46px; height:26px; border-radius:14px; background:var(--panel2); border:1px solid var(--line); position:relative; transition:.2s;}
+  .toggle .sw.on{ background:var(--acc2);}
+  .toggle .sw i{ position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.2s;}
+  .toggle .sw.on i{ left:22px;}
 
-  /* ---------- Tech tree ---------- */
   #techGrid{ display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; }
-  .techCol{ display:flex; flex-direction:column; gap:10px; min-width:130px; }
+  .techCol{ display:flex; flex-direction:column; gap:10px; min-width:132px; }
   .techNode{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; }
-  .techNode.avail{ border-color:var(--acc); }
+  .techNode.avail{ border-color:var(--acc); box-shadow:0 0 0 1px rgba(78,161,255,.3);}
   .techNode.done{ border-color:var(--good); background:rgba(55,214,166,.08); }
   .techNode.lock{ opacity:.55; }
   .techNode h4{ margin:0 0 4px; font-size:12px;}
   .techNode .desc{ font-size:10px; color:var(--muted); margin-bottom:6px; min-height:26px;}
 
-  /* ---------- Intro ---------- */
-  #intro{ position:fixed; inset:0; z-index:100; background:radial-gradient(circle at 50% 30%, #16223a, #070a11 70%);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
-  #intro h1{ font-size:30px; margin:0 0 4px; letter-spacing:.02em;
+  .objItem{ display:flex; gap:8px; align-items:flex-start; padding:5px 0; font-size:13px;}
+  .objItem .ck{ width:18px; height:18px; border-radius:5px; border:1px solid var(--line); flex:0 0 auto; margin-top:1px; text-align:center; line-height:17px; font-size:12px;}
+  .objItem.done .ck{ background:var(--good); border-color:var(--good); color:#06231b;}
+  .objItem.cur{ color:var(--gold);} .objItem.cur .ck{ border-color:var(--gold);}
+  .objItem.future{ opacity:.45;}
+
+  /* Intro / overlays */
+  #intro,#overlay{ position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;
+    background:radial-gradient(circle at 50% 25%, #18263f, #060910 72%); }
+  #overlay{ display:none; z-index:120; background:radial-gradient(circle at 50% 30%, rgba(24,38,63,.96), rgba(6,9,16,.98)); }
+  #intro h1,#overlay h1{ font-size:30px; margin:0 0 4px; letter-spacing:.02em;
     background:linear-gradient(90deg,#4ea1ff,#37d6a6); -webkit-background-clip:text; background-clip:text; color:transparent;}
-  #intro p{ color:var(--muted); max-width:460px; font-size:14px; line-height:1.5; }
-  #startBtn{ margin-top:18px; background:linear-gradient(180deg,#37d6a6,#1f9e78); color:#06231b; border:none;
-    border-radius:16px; padding:16px 34px; font-size:18px; font-weight:900; box-shadow:0 8px 24px rgba(0,0,0,.5);}
-  #startBtn:active{ transform:scale(.96);}
+  #intro p,#overlay p{ color:var(--muted); max-width:470px; font-size:14px; line-height:1.55; }
+  #startBtn,.bigBtn{ margin-top:18px; background:linear-gradient(180deg,#37d6a6,#1f9e78); color:#06231b; border:none;
+    border-radius:16px; padding:16px 34px; font-size:18px; font-weight:900; box-shadow:0 8px 26px rgba(0,0,0,.55);}
+  #startBtn:active,.bigBtn:active{ transform:scale(.96);}
   #loadHint{ color:var(--muted); font-size:12px; margin-top:14px; min-height:16px;}
-  .feat{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px; max-width:480px;}
-  .feat span{ background:rgba(255,255,255,.05); border:1px solid var(--line); border-radius:20px;
-    padding:5px 11px; font-size:11px; color:var(--muted);}
+  .feat{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px; max-width:490px;}
+  .feat span{ background:rgba(255,255,255,.05); border:1px solid var(--line); border-radius:20px; padding:5px 11px; font-size:11px; color:var(--muted);}
   .hidden{ display:none !important; }
+  #fps{ position:fixed; left:8px; bottom:calc(8px + var(--safe-b)); z-index:14; font-size:10px; color:var(--muted);
+    background:rgba(10,14,22,.6); padding:2px 6px; border-radius:6px; display:none; pointer-events:none;}
 </style>
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
   <div id="lookpad"></div>
   <div id="joyZone"><div id="joyBase"><div id="joyKnob"></div></div></div>
+  <canvas id="minimap" width="280" height="212"></canvas>
+  <div id="fps">–</div>
 
-  <!-- Top HUD -->
   <div id="topHud">
     <div class="stat"><span class="lbl">Cash</span><span class="v" id="hudCash">$0</span></div>
     <div class="stat"><span class="lbl">P/min</span><span class="v" id="hudPpm">$0</span></div>
@@ -162,8 +188,8 @@
     <div class="stat"><span class="pill stable" id="hudEcon">STABLE</span></div>
   </div>
   <button id="modeBtn">🏭 MANAGE</button>
+  <button id="soundBtn">🔊</button>
 
-  <!-- Interact prompt (walk mode) -->
   <div id="interactWrap">
     <div id="interactName">Machine</div>
     <div id="interactBtns">
@@ -174,7 +200,6 @@
 
   <div id="toast"></div>
 
-  <!-- Management overlay -->
   <div id="mgmt">
     <div id="mgmtScrim"></div>
     <div id="panelWrap">
@@ -194,25 +219,30 @@
     </div>
   </div>
 
-  <!-- Intro -->
   <div id="intro">
     <h1>AUTOWORKS TYCOON</h1>
-    <p>Walk inside your own 3D car factory. Build production lines, design vehicles, manage a living global market, out-compete rival manufacturers and grow from a small workshop into a global empire.</p>
+    <p>Walk inside your own 3D car factory. Build production lines, design vehicles, hire workers, run a living global market, out-compete rival manufacturers and grow from a small workshop into a global empire.</p>
     <div class="feat">
       <span>🚶 Walkable Factory</span><span>🏭 6-Stage Pipeline</span><span>💹 Dynamic Market</span>
-      <span>🤖 AI Rivals</span><span>🧪 Tech Tree</span><span>📈 Tycoon Sim</span>
+      <span>🤖 AI Rivals</span><span>🧪 Tech Tree</span><span>👷 Workforce</span><span>🎯 Objectives</span>
     </div>
     <button id="startBtn">▶ ENTER FACTORY</button>
     <div id="loadHint">Loading engine…</div>
   </div>
 
+  <div id="overlay">
+    <h1 id="ovTitle">Victory!</h1>
+    <p id="ovText"></p>
+    <button class="bigBtn" id="ovBtn">Continue</button>
+  </div>
+
 <script>
 "use strict";
 /* =====================================================================================
-   AUTOWORKS TYCOON  —  Walkable 3D Car Manufacturing Tycoon
-   Single-file Babylon.js game.  Code structure:
-     /scene  /cameraSystem  /playerController  /factorySystem  /productionSystem
-     /economySystem  /supplyChainSystem  /aiSystem  /researchSystem  /uiSystem  /gameLoop  /saveSystem
+   AUTOWORKS TYCOON  —  Walkable 3D Car Manufacturing Tycoon  (single-file Babylon.js)
+   Sections: /scene /cameraSystem /playerController /factorySystem /productionSystem
+   /economySystem /supplyChainSystem /aiSystem /researchSystem /workforce /marketing
+   /events /objectives /uiSystem /sound /minimap /gameLoop /saveSystem
    ===================================================================================== */
 
 /* ------------------------------------------------------------------ helpers */
@@ -231,15 +261,15 @@ function fmtMoney(n){
 function fmtInt(n){ return Math.round(n).toLocaleString('en-US'); }
 
 /* ====================================================================================
-   GAME STATE  (the full serialisable model)
+   GAME DATA / CONSTANTS
    ==================================================================================== */
 const CATS = ['economy','suv','sports','truck','electric'];
 const CAT_META = {
-  economy:{ name:'Economy', color:[0.55,0.78,0.95], basePrice:16000, baseDemand:14, steel:3, elec:1, rubber:1 },
-  suv:    { name:'SUV',     color:[0.30,0.55,0.40], basePrice:34000, baseDemand:10, steel:5, elec:2, rubber:2 },
-  sports: { name:'Sports',  color:[0.92,0.28,0.30], basePrice:64000, baseDemand:5,  steel:4, elec:3, rubber:1 },
-  truck:  { name:'Truck',   color:[0.85,0.65,0.20], basePrice:42000, baseDemand:7,  steel:6, elec:2, rubber:3 },
-  electric:{name:'Electric',color:[0.20,0.85,0.80], basePrice:48000, baseDemand:9,  steel:3, elec:5, rubber:1 },
+  economy:{ name:'Economy', color:[0.55,0.78,0.95], basePrice:16000, baseDemand:14, steel:3, elec:1, rubber:1, shape:'hatch' },
+  suv:    { name:'SUV',     color:[0.32,0.62,0.42], basePrice:34000, baseDemand:10, steel:5, elec:2, rubber:2, shape:'suv'  },
+  sports: { name:'Sports',  color:[0.93,0.26,0.30], basePrice:64000, baseDemand:5,  steel:4, elec:3, rubber:1, shape:'sport'},
+  truck:  { name:'Truck',   color:[0.88,0.66,0.20], basePrice:42000, baseDemand:7,  steel:6, elec:2, rubber:3, shape:'truck'},
+  electric:{name:'Electric',color:[0.20,0.88,0.82], basePrice:48000, baseDemand:9,  steel:3, elec:5, rubber:1, shape:'sedan'},
 };
 const STAGE_DEFS = [
   { key:'frame',  name:'Frame Assembly',  time:4.0 },
@@ -250,25 +280,28 @@ const STAGE_DEFS = [
   { key:'ship',   name:'Shipping',        time:2.0 },
 ];
 const SIZES = ['Small','Medium','Large','Mega','Global Empire'];
+const DEFAULT_DESIGN = ()=>({ name:'Model A', category:'economy', enginePower:55, weight:50, qualityTarget:60 });
 
 function freshState(){
   return {
-    version:3,
-    cash:250000, debt:0, reputation:50, valuation:0,
-    researchPoints:0,
+    version:4,
+    cash:250000, debt:0, reputation:50, valuation:0, researchPoints:0,
+    workers:6,
+    marketing:{ ticks:0, mult:1.0 },
     economy:{ state:'stable', timer:90, demandMult:1.0 },
     profit:{ windowRev:0, windowCost:0, ppm:0, lastReset:0 },
-    stats:{ carsBuilt:0, carsSold:0, revenue:0, time:0 },
+    stats:{ carsBuilt:0, carsSold:0, revenue:0, time:0, defects:0 },
     resources:{
       steel:      { amt:400, cap:1000, price:220, base:220 },
       electronics:{ amt:300, cap:800,  price:540, base:540 },
       rubber:     { amt:350, cap:800,  price:120, base:120 },
     },
-    contracts:[], // {res, price, qtyPerMin, ticksLeft}
-    design:{ category:'economy', enginePower:55, weight:50, qualityTarget:60 },
+    contracts:[],
+    activeEffects:[],      // {type:'res'|'demand'|'slow', res, cat, mult, ticks, label}
+    eventTimer:55,
     factory:{ sizeIdx:0, warehouseMult:1, automation:0, secondFactory:false },
-    lines:[ makeLine(0) ],
-    machineLv:{}, // "line#-stagekey" -> level   (filled lazily, lvl 1 default)
+    lines:[ makeLine(0, DEFAULT_DESIGN()) ],
+    machineLv:{},
     research:{ unlocked:{} },
     market:(function(){ const m={}; CATS.forEach(c=>{ m[c]={ price:CAT_META[c].basePrice, sat:0, demand:CAT_META[c].baseDemand }; }); return m; })(),
     ai:[
@@ -277,43 +310,44 @@ function freshState(){
       { name:'NovaDrive',   cash:350000, rep:58, share:0.15, strat:'balanced',   prod:0.9, focus:'electric'},
       { name:'IronWorks',   cash:320000, rep:50, share:0.14, strat:'aggressive', prod:1.1, focus:'truck'   },
     ],
+    objIndex:0,
+    settings:{ quality:'high', sound:true, fps:false },
+    won:false,
   };
 }
-function makeLine(idx){
-  return { id:idx, slots: STAGE_DEFS.map(()=>null) };  // each slot holds a car or null
+function makeLine(idx, design){
+  return { id:idx, slots: STAGE_DEFS.map(()=>null), design: design||DEFAULT_DESIGN() };
 }
 let G = freshState();
 
-/* machine level accessor */
 function mlKey(lineId,stageKey){ return lineId+'-'+stageKey; }
-function machineLevel(lineId,stageKey){ const k=mlKey(lineId,stageKey); return G.machineLv[k]||1; }
+function machineLevel(lineId,stageKey){ return G.machineLv[mlKey(lineId,stageKey)]||1; }
 function setMachineLevel(lineId,stageKey,v){ G.machineLv[mlKey(lineId,stageKey)]=v; }
 
 /* ====================================================================================
-   RESEARCH SYSTEM  (node-based tech tree)
+   RESEARCH (node-based tech tree)
    ==================================================================================== */
 const TECH = {
   fastlines:{ name:'Faster Lines', tier:0, cost:40, deps:[], desc:'-18% stage time on every machine.' },
   qcsystems:{ name:'QC Systems',   tier:0, cost:35, deps:[], desc:'-30% defect chance across all stages.' },
-  robotics: { name:'Robotics',     tier:1, cost:90, deps:['fastlines'], desc:'Automation +1: faster lines, auto-restock.' },
+  robotics: { name:'Robotics',     tier:1, cost:90, deps:['fastlines'], desc:'Automation: faster lines, auto-restock, -1 worker/line needed.' },
   ev:       { name:'EV Platform',  tier:1, cost:80, deps:['qcsystems'], desc:'Unlock the Electric vehicle category.' },
   aiqc:     { name:'AI Quality',   tier:2, cost:140, deps:['robotics','qcsystems'], desc:'+12 build quality, near-zero defects.' },
   logistics:{ name:'Logistics',    tier:2, cost:120, deps:['robotics'], desc:'+10% sale price, faster shipping.' },
-  megafac:  { name:'Mega Factory', tier:3, cost:220, deps:['logistics'], desc:'Cheaper expansions, unlock 2nd factory.' },
+  megafac:  { name:'Mega Factory', tier:3, cost:220, deps:['logistics'], desc:'Cheaper expansions, unlock 2nd factory & Mega/Global sizes.' },
 };
 const ResearchSystem = {
   has(id){ return !!G.research.unlocked[id]; },
   available(id){ const t=TECH[id]; if(this.has(id)) return false; return t.deps.every(d=>this.has(d)); },
   unlock(id){
     const t=TECH[id]; if(!t||this.has(id)||!this.available(id)) return false;
-    if(G.researchPoints < t.cost){ UI.toast('Need '+t.cost+' RP to research '+t.name,'bad'); return false; }
+    if(G.researchPoints < t.cost){ UI.toast('Need '+t.cost+' RP to research '+t.name,'bad'); Sound.error(); return false; }
     G.researchPoints -= t.cost; G.research.unlocked[id]=true;
     if(id==='robotics') G.factory.automation = Math.max(G.factory.automation,1);
     if(id==='ev') UI.toast('Electric vehicles unlocked!','good');
-    UI.toast('Researched: '+t.name,'good');
+    UI.toast('Researched: '+t.name,'good'); Sound.research();
     return true;
   },
-  // aggregate modifiers
   stageTimeMult(){ let m=1; if(this.has('fastlines'))m*=0.82; if(this.has('robotics'))m*=0.90; return m; },
   defectMult(){ let m=1; if(this.has('qcsystems'))m*=0.70; if(this.has('aiqc'))m*=0.15; return m; },
   qualityBonus(){ return this.has('aiqc')?12:0; },
@@ -322,619 +356,720 @@ const ResearchSystem = {
 };
 
 /* ====================================================================================
-   SCENE  /  ENGINE
+   SCENE / ENGINE
    ==================================================================================== */
 const Scene = {
-  engine:null, scene:null, canvas:null, hemi:null, sun:null,
+  engine:null, scene:null, canvas:null, hemi:null, sun:null, fill:null, glow:null, ptex:null,
   init(){
     this.canvas = document.getElementById('renderCanvas');
     this.engine = new BABYLON.Engine(this.canvas, true, {
       preserveDrawingBuffer:false, stencil:false, antialias:true,
       powerPreference:'high-performance', failIfMajorPerformanceCaveat:false
     });
-    // Engine renders at CSS-pixel resolution (adaptToDeviceRatio off) which is already
-    // a big perf win on retina. Add a little extra headroom on very high-DPR phones.
-    const dpr = window.devicePixelRatio||1;
-    this.engine.setHardwareScalingLevel(dpr>=3 ? 1.4 : 1.0);
+    this.applyScaling();
     const scene = new BABYLON.Scene(this.engine);
     this.scene = scene;
-    scene.clearColor = new BABYLON.Color3(0.05,0.07,0.11);
-    scene.ambientColor = new BABYLON.Color3(0.4,0.45,0.55);
+    scene.clearColor = new BABYLON.Color3(0.04,0.06,0.10);
+    scene.ambientColor = new BABYLON.Color3(0.36,0.40,0.50);
     scene.collisionsEnabled = true;
-    scene.gravity = new BABYLON.Vector3(0,-0.4,0);
-    scene.skipPointerMovePicking = true;       // perf: we don't need hover picking
-    scene.autoClearDepthAndStencil = true;
+    scene.skipPointerMovePicking = true;
     scene.blockMaterialDirtyMechanism = true;
+    // depth fog hides arena edges & adds atmosphere
+    scene.fogMode = BABYLON.Scene.FOGMODE_LINEAR;
+    scene.fogColor = new BABYLON.Color3(0.06,0.09,0.15);
+    scene.fogStart = 55; scene.fogEnd = 165;
 
     this.hemi = new BABYLON.HemisphericLight('hemi', new BABYLON.Vector3(0,1,0), scene);
-    this.hemi.intensity = 0.85;
-    this.hemi.groundColor = new BABYLON.Color3(0.22,0.24,0.30);
-    this.sun = new BABYLON.DirectionalLight('sun', new BABYLON.Vector3(-0.5,-1,-0.35), scene);
-    this.sun.intensity = 0.7;
-    this.sun.position = new BABYLON.Vector3(40,60,40);
+    this.hemi.intensity = 0.72;
+    this.hemi.groundColor = new BABYLON.Color3(0.18,0.20,0.26);
+    this.hemi.diffuse = new BABYLON.Color3(0.85,0.88,1.0);
+    this.sun = new BABYLON.DirectionalLight('sun', new BABYLON.Vector3(-0.45,-1,-0.35), scene);
+    this.sun.intensity = 0.85;
+    this.sun.diffuse = new BABYLON.Color3(1.0,0.96,0.86);
+    this.sun.position = new BABYLON.Vector3(40,70,40);
+    // cool rim fill from opposite side
+    this.fill = new BABYLON.DirectionalLight('fill', new BABYLON.Vector3(0.5,-0.4,0.5), scene);
+    this.fill.intensity = 0.25;
+    this.fill.diffuse = new BABYLON.Color3(0.5,0.7,1.0);
+
+    this.ptex = this.makeParticleTex();
+    this.applyQuality();
     return scene;
+  },
+  applyScaling(){
+    const dpr = window.devicePixelRatio||1;
+    const low = G.settings && G.settings.quality==='low';
+    this.engine.setHardwareScalingLevel(low ? 1.7 : (dpr>=3 ? 1.4 : 1.0));
+  },
+  applyQuality(){
+    const high = !(G.settings && G.settings.quality==='low');
+    const s=this.scene;
+    if(high){
+      if(!this.glow){ this.glow=new BABYLON.GlowLayer('glow',s,{mainTextureFixedSize:256, blurKernelSize:32}); this.glow.intensity=0.7; }
+    } else if(this.glow){ this.glow.dispose(); this.glow=null; }
+    this.applyScaling();
+    if(Factory.setParticlesEnabled) Factory.setParticlesEnabled(high);
+    document.getElementById('fps').style.display = (G.settings && G.settings.fps)?'block':'none';
   },
   mat(name,r,g,b,opts){
     const m=new BABYLON.StandardMaterial(name,this.scene);
     m.diffuseColor=new BABYLON.Color3(r,g,b);
-    m.specularColor=new BABYLON.Color3(0.05,0.05,0.05);
-    if(opts&&opts.emissive) m.emissiveColor=new BABYLON.Color3(r*0.35,g*0.35,b*0.35);
+    m.specularColor=new BABYLON.Color3((opts&&opts.spec!=null)?opts.spec:0.06,(opts&&opts.spec!=null)?opts.spec:0.06,(opts&&opts.spec!=null)?opts.spec:0.06);
+    if(opts&&opts.emissive!=null){ const e=opts.emissive; m.emissiveColor=new BABYLON.Color3(r*e,g*e,b*e); }
+    if(opts&&opts.emc){ m.emissiveColor=new BABYLON.Color3(opts.emc[0],opts.emc[1],opts.emc[2]); }
     if(opts&&opts.alpha!=null) m.alpha=opts.alpha;
+    if(opts&&opts.unlit){ m.disableLighting=true; m.emissiveColor=new BABYLON.Color3(r,g,b); }
     m.freeze();
     return m;
+  },
+  makeParticleTex(){
+    const dt=new BABYLON.DynamicTexture('ptex',{width:32,height:32},this.scene,false);
+    const c=dt.getContext();
+    const g=c.createRadialGradient(16,16,0,16,16,16);
+    g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.4,'rgba(255,255,255,0.7)'); g.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=g; c.fillRect(0,0,32,32); dt.update(); dt.hasAlpha=true;
+    return dt;
   }
 };
 
 /* ====================================================================================
-   FACTORY SYSTEM  —  world geometry, zones, machines, interactables
+   FACTORY SYSTEM — world geometry, structure, zones, machines, cars, particles
    ==================================================================================== */
 const Factory = {
-  interactables:[],      // {pos, radius, name, type, data, mesh}
-  machineMeshes:{},      // key -> {root, glow}
-  carTemplates:{},       // category -> hidden template mesh (instanced per car)
-  carPools:{},           // category -> array of free instances
-  lineAnchors:[],        // per-line world positions of each stage
+  interactables:[], machineMeshes:{}, carTemplates:{}, carPools:{}, lineAnchors:[],
+  shadowTex:null, particlesOn:true,
   build(){
     const s=Scene.scene;
-    /* ----- ground ----- */
-    const ground = BABYLON.MeshBuilder.CreateGround('ground',{width:120,height:90},s);
-    ground.material = Scene.mat('gmat',0.13,0.15,0.19);
-    ground.checkCollisions = true;
-    ground.position.y = 0;
-    ground.freezeWorldMatrix();
-    // floor grid accent lines
-    const grid = Scene.mat('grid',0.18,0.21,0.27);
-    for(let i=-55;i<=55;i+=10){
-      const l=BABYLON.MeshBuilder.CreateBox('gl',{width:120,height:0.02,depth:0.18},s);
-      l.position.set(0,0.011,i); l.material=grid; l.isPickable=false; l.freezeWorldMatrix();
-      const l2=BABYLON.MeshBuilder.CreateBox('gl',{width:0.18,height:0.02,depth:90},s);
-      l2.position.set(i,0.011,0); l2.material=grid; l2.isPickable=false; l2.freezeWorldMatrix();
+    this.shadowTex=this.makeShadowTex();
+
+    /* ground */
+    const ground = BABYLON.MeshBuilder.CreateGround('ground',{width:130,height:96},s);
+    ground.material = Scene.mat('gmat',0.11,0.13,0.17,{spec:0.18});
+    ground.checkCollisions = true; ground.position.y=0; ground.freezeWorldMatrix();
+    const grid = Scene.mat('grid',0.20,0.24,0.32,{emissive:0.25});
+    for(let i=-60;i<=60;i+=10){
+      const l=BABYLON.MeshBuilder.CreateBox('gl',{width:130,height:0.02,depth:0.16},s);
+      l.position.set(0,0.012,i); l.material=grid; l.isPickable=false; l.freezeWorldMatrix();
+      const l2=BABYLON.MeshBuilder.CreateBox('gl',{width:0.16,height:0.02,depth:96},s);
+      l2.position.set(i,0.012,0); l2.material=grid; l2.isPickable=false; l2.freezeWorldMatrix();
     }
 
-    /* ----- perimeter walls (collision) ----- */
-    const wallMat = Scene.mat('wall',0.16,0.18,0.24);
-    const wallTop = Scene.mat('walltop',0.26,0.5,0.85,{emissive:true});
-    const mkWall=(w,h,d,x,y,z)=>{ const b=BABYLON.MeshBuilder.CreateBox('w',{width:w,height:h,depth:d},s);
-      b.position.set(x,y,z); b.material=wallMat; b.checkCollisions=true; b.freezeWorldMatrix(); return b; };
-    mkWall(120,6,1,0,3,-45); mkWall(120,6,1,0,3,45); mkWall(1,6,90,-60,3,0); mkWall(1,6,90,60,3,0);
-    // glowing strip along walls (visual)
-    [[120,-44.4],[120,44.4]].forEach(()=>{});
+    this.buildShell();
+    this.buildSky();
 
-    /* ----- car templates (low-poly), one per category, used for instances ----- */
-    CATS.forEach(cat=>{
-      const col=CAT_META[cat].color;
-      const tpl=this.makeCarMesh(s,col,cat);
-      tpl.isVisible=false; tpl.isPickable=false;
-      this.carTemplates[cat]=tpl; this.carPools[cat]=[];
-    });
+    /* car templates per category */
+    CATS.forEach(cat=>{ const tpl=this.makeCarMesh(s,cat); tpl.isVisible=false; tpl.isPickable=false;
+      this.carTemplates[cat]=tpl; this.carPools[cat]=[]; });
 
-    /* ----- zones ----- */
-    // Layout (X across, Z depth):
-    //  Production lines run along +X in the central hall (z ~ -6..+6 region per line)
-    //  Warehouse left (-X), Research lab back-left, Shipping dock right (+X far)
-    this.makeZonePad('Production Hall', 0,  0,  46,26, [0.18,0.30,0.45]);
-    this.makeZonePad('Warehouse',     -44, 0,  22,34, [0.40,0.30,0.18]);
-    this.makeZonePad('Research Lab',  -44,-30, 22,18, [0.30,0.20,0.42]);
-    this.makeZonePad('Shipping Dock',  44, 0,  22,30, [0.18,0.42,0.34]);
+    /* zone pads + signs */
+    this.makeZonePad('Production Hall', 0,  0,  48,28, [0.16,0.30,0.46]);
+    this.makeZonePad('Warehouse',     -46, 0,  22,34, [0.42,0.30,0.16]);
+    this.makeZonePad('Research Lab',  -46,-32, 22,18, [0.32,0.20,0.45]);
+    this.makeZonePad('Shipping Dock',  46, 0,  22,30, [0.16,0.44,0.34]);
 
     this.buildProductionLines();
     this.buildWarehouse();
     this.buildResearchLab();
     this.buildShippingDock();
-    this.refreshZoneLocks();
   },
 
-  makeCarMesh(s,col,cat){
-    const body=BABYLON.MeshBuilder.CreateBox('cbody',{width:2.4,height:0.7,depth:1.2},s); body.position.y=0.55;
-    const cab=BABYLON.MeshBuilder.CreateBox('ccab',{width:1.2,height:0.6,depth:1.05},s); cab.position.set(-0.1,1.05,0);
-    const w=[];
-    const wp=[[0.8,0.55],[0.8,-0.55],[-0.8,0.55],[-0.8,-0.55]];
-    wp.forEach(p=>{ const wheel=BABYLON.MeshBuilder.CreateCylinder('cw',{diameter:0.55,height:0.25,tessellation:8},s);
-      wheel.rotation.x=Math.PI/2; wheel.position.set(p[0],0.3,p[1]); w.push(wheel); });
-    const merged=BABYLON.Mesh.MergeMeshes([body,cab,...w],true,true,undefined,false,false);
-    merged.name='carTpl_'+cat;
-    const m=new BABYLON.StandardMaterial('carmat_'+cat,s); m.diffuseColor=new BABYLON.Color3(col[0],col[1],col[2]);
-    m.specularColor=new BABYLON.Color3(0.25,0.25,0.25); m.freeze(); merged.material=m;
-    return merged;
+  /* roof, pillars, wall windows, neon trims — gives a lit, enclosed factory */
+  buildShell(){
+    const s=Scene.scene;
+    const wallMat = Scene.mat('wall',0.13,0.15,0.20,{spec:0.1});
+    const neon = Scene.mat('neon',0.30,0.62,1.0,{unlit:true});
+    const neonG = Scene.mat('neonG',0.30,0.95,0.7,{unlit:true});
+    const mkWall=(w,h,d,x,y,z,m)=>{ const b=BABYLON.MeshBuilder.CreateBox('w',{width:w,height:h,depth:d},s);
+      b.position.set(x,y,z); b.material=m||wallMat; b.checkCollisions=true; b.freezeWorldMatrix(); b.isPickable=false; return b; };
+    const H=9;
+    mkWall(130,H,1.2,0,H/2,-48); mkWall(130,H,1.2,0,H/2,48);
+    mkWall(1.2,H,96,-65,H/2,0); mkWall(1.2,H,96,65,H/2,0);
+    // neon trim strips along tops of walls
+    const trim=(w,d,x,z,m)=>{ const b=BABYLON.MeshBuilder.CreateBox('tr',{width:w,height:0.25,depth:d},s);
+      b.position.set(x,H-0.4,z); b.material=m; b.isPickable=false; b.freezeWorldMatrix(); };
+    trim(130,0.3,0,-47.4,neon); trim(130,0.3,0,47.4,neonG); trim(0.3,96,-64.4,0,neonG); trim(0.3,96,64.4,0,neon);
+    // support pillars
+    const pillarMat=Scene.mat('pill',0.16,0.18,0.23);
+    for(let x=-50;x<=50;x+=25){ for(let z=-36;z<=36;z+=36){
+      const p=BABYLON.MeshBuilder.CreateBox('pl',{width:1.6,height:H,depth:1.6},s);
+      p.position.set(x,H/2,z); p.material=pillarMat; p.checkCollisions=true; p.freezeWorldMatrix(); p.isPickable=false;
+    }}
+    // roof beams (thin) + light panels (emissive -> glow)
+    const beamMat=Scene.mat('beam',0.10,0.12,0.16);
+    const panelMat=Scene.mat('panel',1.0,0.97,0.85,{unlit:true});
+    for(let x=-55;x<=55;x+=15){
+      const beam=BABYLON.MeshBuilder.CreateBox('bm',{width:1,height:0.6,depth:96},s);
+      beam.position.set(x,H,0); beam.material=beamMat; beam.isPickable=false; beam.freezeWorldMatrix();
+    }
+    for(let x=-45;x<=45;x+=18){ for(let z=-30;z<=30;z+=20){
+      const lp=BABYLON.MeshBuilder.CreateBox('lp',{width:6,height:0.3,depth:2},s);
+      lp.position.set(x,H-0.2,z); lp.material=panelMat; lp.isPickable=false; lp.freezeWorldMatrix();
+    }}
+  },
+
+  buildSky(){
+    const s=Scene.scene;
+    const dt=new BABYLON.DynamicTexture('sky',{width:8,height:256},s,false);
+    const c=dt.getContext();
+    const g=c.createLinearGradient(0,0,0,256);
+    g.addColorStop(0,'#0a1428'); g.addColorStop(0.55,'#10203a'); g.addColorStop(1,'#1b3152');
+    c.fillStyle=g; c.fillRect(0,0,8,256); dt.update();
+    const m=new BABYLON.StandardMaterial('skym',s); m.disableLighting=true; m.backFaceCulling=false;
+    m.emissiveTexture=dt; m.diffuseColor=new BABYLON.Color3(0,0,0); m.fogEnabled=false; m.freeze();
+    const dome=BABYLON.MeshBuilder.CreateSphere('sky',{diameter:340,segments:12,sideOrientation:BABYLON.Mesh.BACKSIDE},s);
+    dome.material=m; dome.isPickable=false; dome.infiniteDistance=true; dome.freezeWorldMatrix();
+  },
+
+  makeShadowTex(){
+    const dt=new BABYLON.DynamicTexture('shadow',{width:64,height:64},Scene.scene,false);
+    const c=dt.getContext(); const g=c.createRadialGradient(32,32,2,32,32,32);
+    g.addColorStop(0,'rgba(0,0,0,0.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=g; c.fillRect(0,0,64,64); dt.update(); dt.hasAlpha=true; return dt;
+  },
+  blobShadow(diam){
+    const s=Scene.scene;
+    if(!this.shadowTex) this.shadowTex=this.makeShadowTex();
+    const d=BABYLON.MeshBuilder.CreateGround('blob',{width:diam,height:diam},s);
+    const m=new BABYLON.StandardMaterial('blobm',s); m.diffuseTexture=this.shadowTex;
+    m.useAlphaFromDiffuseTexture=true; m.disableLighting=true; m.emissiveColor=new BABYLON.Color3(0,0,0);
+    m.opacityTexture=this.shadowTex; m.fogEnabled=false; m.freeze();
+    d.material=m; d.isPickable=false; d.position.y=0.03; return d;
+  },
+
+  /* category-specific low-poly car silhouettes */
+  makeCarMesh(s,cat){
+    const col=CAT_META[cat].color, shape=CAT_META[cat].shape;
+    const parts=[];
+    const glass=Scene.mat('glass_'+cat,0.10,0.13,0.18,{emc:[0.05,0.07,0.10],spec:0.4});
+    const dims = {
+      hatch:{bw:2.2,bh:0.7,bd:1.15,cw:1.15,ch:0.62,cx:-0.1,cz:0,by:0.55,cy:1.0,wd:0.5,wz:0.5,wx:0.7},
+      suv:  {bw:2.6,bh:0.95,bd:1.35,cw:1.7,ch:0.8,cx:0,cz:0,by:0.7,cy:1.42,wd:0.62,wz:0.62,wx:0.85},
+      sport:{bw:2.9,bh:0.55,bd:1.3,cw:1.0,ch:0.45,cx:-0.15,cz:0,by:0.45,cy:0.82,wd:0.55,wz:0.6,wx:0.95},
+      truck:{bw:1.5,bh:1.0,bd:1.3,cw:1.2,ch:0.85,cx:0.85,cz:0,by:0.75,cy:1.45,wd:0.62,wz:0.62,wx:0.7},
+      sedan:{bw:2.6,bh:0.72,bd:1.25,cw:1.5,ch:0.62,cx:-0.05,cz:0,by:0.6,cy:1.12,wd:0.55,wz:0.58,wx:0.85},
+    }[shape];
+    const bodyMat=Scene.mat('carmat_'+cat,col[0],col[1],col[2],{spec:0.35});
+    const body=BABYLON.MeshBuilder.CreateBox('cb',{width:dims.bw,height:dims.bh,depth:dims.bd},s);
+    body.position.y=dims.by; body.material=bodyMat; parts.push(body);
+    const cab=BABYLON.MeshBuilder.CreateBox('cc',{width:dims.cw,height:dims.ch,depth:dims.cd||(dims.bd-0.1)},s);
+    cab.position.set(dims.cx,dims.cy,dims.cz); cab.material=glass; parts.push(cab);
+    if(shape==='truck'){ // flatbed
+      const bed=BABYLON.MeshBuilder.CreateBox('bed',{width:1.5,height:0.5,depth:1.3},s);
+      bed.position.set(-0.75,0.7,0); bed.material=bodyMat; parts.push(bed);
+    }
+    // headlights (emissive)
+    const hl=Scene.mat('hl_'+cat,1,1,0.85,{unlit:true});
+    [-1,1].forEach(zz=>{ const h=BABYLON.MeshBuilder.CreateBox('h',{width:0.12,height:0.16,depth:0.22},s);
+      h.position.set(dims.bw/2-0.02,dims.by,zz*(dims.bd/2-0.25)); h.material=hl; parts.push(h); });
+    if(shape==='sedan'){ const bar=BABYLON.MeshBuilder.CreateBox('bar',{width:0.1,height:0.1,depth:dims.bd*0.7},s);
+      bar.position.set(dims.bw/2-0.02,dims.by+0.18,0); bar.material=Scene.mat('evbar',0.3,1,0.9,{unlit:true}); parts.push(bar); }
+    // wheels
+    const tire=Scene.mat('tire',0.05,0.05,0.06);
+    const wp=[[dims.wx,dims.wz],[dims.wx,-dims.wz],[-dims.wx,dims.wz],[-dims.wx,-dims.wz]];
+    wp.forEach(p=>{ const w=BABYLON.MeshBuilder.CreateCylinder('w',{diameter:dims.wd,height:0.22,tessellation:8},s);
+      w.rotation.x=Math.PI/2; w.position.set(p[0],dims.wd/2,p[1]); w.material=tire; parts.push(w); });
+    const merged=BABYLON.Mesh.MergeMeshes(parts,true,true,undefined,false,true);
+    merged.name='carTpl_'+cat; return merged;
   },
 
   makeZonePad(name,cx,cz,w,d,col){
     const s=Scene.scene;
     const pad=BABYLON.MeshBuilder.CreateGround('pad_'+name,{width:w,height:d},s);
-    const m=Scene.mat('padm_'+name,col[0],col[1],col[2]); m.alpha=0.55;
+    const m=Scene.mat('padm_'+name,col[0],col[1],col[2]); m.unfreeze(); m.alpha=0.5; m.freeze();
     pad.material=m; pad.position.set(cx,0.02,cz); pad.isPickable=false; pad.freezeWorldMatrix();
-    // border
-    const bm=Scene.mat('padb_'+name,col[0]*1.6,col[1]*1.6,col[2]*1.6,{emissive:true});
-    const t=0.3;
-    [[w,t,0,d/2],[w,t,0,-d/2],[t,d,w/2,0],[t,d,-w/2,0]].forEach(seg=>{
-      const b=BABYLON.MeshBuilder.CreateBox('pb',{width:seg[0],height:0.06,depth:seg[1]},s);
-      b.position.set(cx+seg[2],0.04,cz+seg[3]); b.material=bm; b.isPickable=false; b.freezeWorldMatrix();
+    const bm=Scene.mat('padb_'+name,col[0]*2.2,col[1]*2.2,col[2]*2.2,{unlit:true});
+    [[w,0.3,0,d/2],[w,0.3,0,-d/2],[0.3,d,w/2,0],[0.3,d,-w/2,0]].forEach(seg=>{
+      const b=BABYLON.MeshBuilder.CreateBox('pb',{width:seg[0],height:0.07,depth:seg[1]},s);
+      b.position.set(cx+seg[2],0.05,cz+seg[3]); b.material=bm; b.isPickable=false; b.freezeWorldMatrix();
     });
-    // floating sign
-    this.makeSign(name,cx,5.5,cz - d/2 + 0.6);
+    this.makeSign(name,cx,6.0,cz - d/2 + 0.7);
   },
-
   makeSign(text,x,y,z){
     const s=Scene.scene;
     const dt=new BABYLON.DynamicTexture('sign_'+text,{width:512,height:128},s,true);
-    dt.hasAlpha=true;
-    const ctx=dt.getContext();
-    ctx.clearRect(0,0,512,128);
-    dt.drawText(text,null,90,'bold 64px sans-serif','#ffffff','transparent',true);
+    dt.hasAlpha=true; const ctx=dt.getContext(); ctx.clearRect(0,0,512,128);
+    dt.drawText(text,null,92,'bold 62px sans-serif','#dff0ff','transparent',true);
     const mat=new BABYLON.StandardMaterial('signm_'+text,s);
-    mat.diffuseTexture=dt; mat.emissiveColor=new BABYLON.Color3(1,1,1); mat.opacityTexture=dt;
-    mat.backFaceCulling=false; mat.disableLighting=true; mat.freeze();
+    mat.diffuseTexture=dt; mat.emissiveColor=new BABYLON.Color3(0.9,0.96,1); mat.opacityTexture=dt;
+    mat.backFaceCulling=false; mat.disableLighting=true; mat.fogEnabled=false; mat.freeze();
     const plane=BABYLON.MeshBuilder.CreatePlane('signp_'+text,{width:9,height:2.25},s);
+    mat.unfreeze && 0;
     plane.material=mat; plane.position.set(x,y,z); plane.isPickable=false;
-    plane.billboardMode=BABYLON.Mesh.BILLBOARDMODE_Y;
-    return plane;
+    plane.billboardMode=BABYLON.Mesh.BILLBOARDMODE_Y; return plane;
   },
 
   /* ---------- production lines ---------- */
   buildProductionLines(){
-    // remove existing machine meshes for lines beyond current (rebuild all)
-    Object.values(this.machineMeshes).forEach(o=>{ if(o.root) o.root.dispose(); });
+    Object.values(this.machineMeshes).forEach(o=>{ if(o.root) o.root.dispose(); if(o.sparks)o.sparks.dispose(); if(o.mist)o.mist.dispose(); if(o.shadow)o.shadow.dispose(); });
     this.machineMeshes={}; this.lineAnchors=[];
     this.interactables = this.interactables.filter(it=>it.type!=='machine');
-
     const s=Scene.scene;
-    const startX=-18, stepX=7.2;           // machines along +X
-    const lineGapZ=8;                       // distance between lines
+    const startX=-20, stepX=7.4, lineGapZ=9;
     const baseZ = - (G.lines.length-1)*lineGapZ/2;
     G.lines.forEach((line,li)=>{
       const z = baseZ + li*lineGapZ;
       const anchors=[];
+      // conveyor strip
+      const conv=BABYLON.MeshBuilder.CreateBox('conv',{width:stepX*(STAGE_DEFS.length-1)+3.4,height:0.18,depth:1.5},s);
+      conv.position.set(startX + stepX*(STAGE_DEFS.length-1)/2, 0.5, z+1.7);
+      conv.material=Scene.mat('convm'+li,0.08,0.09,0.12,{spec:0.2}); conv.isPickable=false; conv.freezeWorldMatrix();
+      const convTop=BABYLON.MeshBuilder.CreateBox('convt',{width:stepX*(STAGE_DEFS.length-1)+3.4,height:0.04,depth:1.2},s);
+      convTop.position.set(startX + stepX*(STAGE_DEFS.length-1)/2, 0.6, z+1.7);
+      convTop.material=Scene.mat('convtm'+li,0.18,0.4,0.6,{emissive:0.4}); convTop.isPickable=false; convTop.freezeWorldMatrix();
       STAGE_DEFS.forEach((st,si)=>{
-        const x=startX+si*stepX;
-        anchors.push(new BABYLON.Vector3(x,0,z));
-        const root=this.makeMachineMesh(s,st,li,x,z);
-        this.machineMeshes[mlKey(line.id,st.key)] = root;
-        // interactable
-        this.interactables.push({
-          pos:new BABYLON.Vector3(x,1,z-2.0), radius:3.4, name:'Line '+(li+1)+' · '+st.name,
-          type:'machine', data:{lineId:line.id, stageKey:st.key}, mesh:root.glow
-        });
+        const x=startX+si*stepX; anchors.push(new BABYLON.Vector3(x,0,z));
+        const mm=this.makeMachineMesh(s,st,li,x,z);
+        this.machineMeshes[mlKey(line.id,st.key)] = mm;
+        this.interactables.push({ pos:new BABYLON.Vector3(x,1,z-2.2), radius:3.6,
+          name:'Line '+(li+1)+' · '+st.name, type:'machine', data:{lineId:line.id, stageKey:st.key}, mesh:mm.glow });
       });
-      // conveyor strip connecting machines
-      const conv=BABYLON.MeshBuilder.CreateBox('conv',{width:stepX*(STAGE_DEFS.length-1)+3,height:0.12,depth:1.4},s);
-      conv.position.set(startX + stepX*(STAGE_DEFS.length-1)/2, 0.45, z+1.6);
-      conv.material=Scene.mat('convm',0.10,0.11,0.14); conv.isPickable=false; conv.freezeWorldMatrix();
       this.lineAnchors[li]=anchors;
     });
+    this.setParticlesEnabled(this.particlesOn && !(G.settings&&G.settings.quality==='low'));
   },
   makeMachineMesh(s,st,li,x,z){
     const root=new BABYLON.TransformNode('mach_'+li+'_'+st.key,s);
-    const baseCol={ frame:[0.5,0.5,0.55], engine:[0.85,0.5,0.2], body:[0.4,0.6,0.85],
-                    paint:[0.8,0.3,0.7], qc:[0.3,0.8,0.6], ship:[0.85,0.75,0.25] }[st.key];
-    const body=BABYLON.MeshBuilder.CreateBox('mb',{width:3,height:3,depth:2.4},s);
-    body.position.set(x,1.5,z); body.material=Scene.mat('mm_'+li+st.key,baseCol[0]*0.6,baseCol[1]*0.6,baseCol[2]*0.6);
+    const baseCol={ frame:[0.55,0.57,0.62], engine:[0.9,0.5,0.18], body:[0.4,0.62,0.9],
+                    paint:[0.85,0.3,0.72], qc:[0.3,0.85,0.62], ship:[0.9,0.78,0.25] }[st.key];
+    const body=BABYLON.MeshBuilder.CreateBox('mb',{width:3,height:3,depth:2.6},s);
+    body.position.set(x,1.5,z); body.material=Scene.mat('mm_'+li+st.key,baseCol[0]*0.45,baseCol[1]*0.45,baseCol[2]*0.45,{spec:0.2});
     body.checkCollisions=true; body.parent=root; body.freezeWorldMatrix(); body.isPickable=false;
-    const top=BABYLON.MeshBuilder.CreateBox('mt',{width:2.2,height:0.5,depth:1.8},s);
-    top.position.set(x,3.2,z); top.material=Scene.mat('mt_'+li+st.key,baseCol[0],baseCol[1],baseCol[2],{emissive:true});
+    const stripe=BABYLON.MeshBuilder.CreateBox('ms',{width:3.05,height:0.4,depth:2.65},s);
+    stripe.position.set(x,2.5,z); stripe.material=Scene.mat('mstr_'+li+st.key,baseCol[0],baseCol[1],baseCol[2],{emissive:0.5});
+    stripe.parent=root; stripe.freezeWorldMatrix(); stripe.isPickable=false;
+    const top=BABYLON.MeshBuilder.CreateBox('mt',{width:2.2,height:0.5,depth:1.9},s);
+    top.position.set(x,3.25,z); top.material=Scene.mat('mt_'+li+st.key,baseCol[0],baseCol[1],baseCol[2],{emissive:0.7});
     top.parent=root; top.freezeWorldMatrix(); top.isPickable=false;
-    const arm=BABYLON.MeshBuilder.CreateBox('marm',{width:0.4,height:2.4,depth:0.4},s);
-    arm.position.set(x+1.2,2.2,z-1.0); arm.material=Scene.mat('marm_'+li+st.key,0.3,0.32,0.4);
-    arm.parent=root; arm.isPickable=false; // animated (not frozen)
-    // glow ring under machine (highlight target)
-    const glow=BABYLON.MeshBuilder.CreateTorus('mg',{diameter:4.2,thickness:0.18,tessellation:18},s);
-    glow.position.set(x,0.12,z); glow.rotation.x=0;
-    const gm=new BABYLON.StandardMaterial('mgm_'+li+st.key,s); gm.emissiveColor=new BABYLON.Color3(0.2,0.6,1);
-    gm.disableLighting=true; glow.material=gm; glow.isPickable=false; glow.visibility=0;
-    return {root, glow, arm, top, x, z};
+    // robotic arm (animated): base + upper arm + tool head
+    const armBase=BABYLON.MeshBuilder.CreateCylinder('mab',{diameter:0.7,height:0.5,tessellation:8},s);
+    armBase.position.set(x+1.0,1.0,z-1.4); armBase.material=Scene.mat('mab_'+li+st.key,0.25,0.27,0.34); armBase.parent=root; armBase.isPickable=false;
+    const armPivot=new BABYLON.TransformNode('mapivot_'+li+st.key,s); armPivot.position.set(x+1.0,1.2,z-1.4); armPivot.parent=root;
+    const upper=BABYLON.MeshBuilder.CreateBox('mau',{width:0.32,height:2.2,depth:0.32},s);
+    upper.position.set(0,1.0,0); upper.material=Scene.mat('mau_'+li+st.key,0.7,0.72,0.8); upper.parent=armPivot; upper.isPickable=false;
+    const head=BABYLON.MeshBuilder.CreateBox('mah',{width:0.5,height:0.4,depth:0.5},s);
+    head.position.set(0,2.1,0); head.material=Scene.mat('mah_'+li+st.key,baseCol[0],baseCol[1],baseCol[2],{emissive:0.6}); head.parent=armPivot; head.isPickable=false;
+    // glow ring
+    const glow=BABYLON.MeshBuilder.CreateTorus('mg',{diameter:4.4,thickness:0.16,tessellation:20},s);
+    glow.position.set(x,0.14,z);
+    const gm=new BABYLON.StandardMaterial('mgm_'+li+st.key,s); gm.emissiveColor=new BABYLON.Color3(0.25,0.65,1); gm.disableLighting=true; gm.fogEnabled=false;
+    glow.material=gm; glow.isPickable=false; glow.visibility=0;
+    // static AO pad
+    const pad=this.blobShadow(4.4); pad.position.set(x,0.04,z); pad.freezeWorldMatrix();
+    // particles
+    let sparks=null, mist=null;
+    if(st.key==='frame'||st.key==='engine'||st.key==='qc') sparks=this.makeSparks(x+0.6,1.6,z+1.4,st.key);
+    if(st.key==='paint') mist=this.makeMist(x,1.8,z+1.4);
+    return {root, glow, armPivot, top, x, z, sparks, mist};
+  },
+  makeSparks(x,y,z,key){
+    const ps=new BABYLON.ParticleSystem('sp_'+key+Math.random(),40,Scene.scene);
+    ps.particleTexture=Scene.ptex; ps.emitter=new BABYLON.Vector3(x,y,z);
+    ps.minEmitBox=new BABYLON.Vector3(-0.2,-0.1,-0.2); ps.maxEmitBox=new BABYLON.Vector3(0.2,0.1,0.2);
+    ps.color1=new BABYLON.Color4(1,0.8,0.2,1); ps.color2=new BABYLON.Color4(1,0.5,0.05,1); ps.colorDead=new BABYLON.Color4(1,0.3,0,0);
+    ps.minSize=0.04; ps.maxSize=0.16; ps.minLifeTime=0.08; ps.maxLifeTime=0.3; ps.emitRate=0;
+    ps.direction1=new BABYLON.Vector3(-1,1.5,-1); ps.direction2=new BABYLON.Vector3(1,2.5,1);
+    ps.minEmitPower=1.5; ps.maxEmitPower=4; ps.gravity=new BABYLON.Vector3(0,-9,0); ps.blendMode=BABYLON.ParticleSystem.BLENDMODE_ADD;
+    ps.start(); return ps;
+  },
+  makeMist(x,y,z){
+    const ps=new BABYLON.ParticleSystem('mist'+Math.random(),50,Scene.scene);
+    ps.particleTexture=Scene.ptex; ps.emitter=new BABYLON.Vector3(x,y,z);
+    ps.minEmitBox=new BABYLON.Vector3(-0.6,0,-0.4); ps.maxEmitBox=new BABYLON.Vector3(0.6,0.3,0.4);
+    ps.color1=new BABYLON.Color4(0.8,0.3,0.8,0.5); ps.color2=new BABYLON.Color4(0.5,0.4,0.9,0.4); ps.colorDead=new BABYLON.Color4(0.5,0.4,0.9,0);
+    ps.minSize=0.2; ps.maxSize=0.6; ps.minLifeTime=0.4; ps.maxLifeTime=0.9; ps.emitRate=0;
+    ps.direction1=new BABYLON.Vector3(-0.3,1,-0.3); ps.direction2=new BABYLON.Vector3(0.3,1.5,0.3);
+    ps.minEmitPower=0.4; ps.maxEmitPower=1; ps.gravity=new BABYLON.Vector3(0,0.5,0);
+    ps.start(); return ps;
+  },
+  setParticlesEnabled(on){
+    this.particlesOn=on;
+    for(const k in this.machineMeshes){ const m=this.machineMeshes[k];
+      if(!on){ if(m.sparks)m.sparks.emitRate=0; if(m.mist)m.mist.emitRate=0; } }
   },
 
-  /* ---------- warehouse ---------- */
+  /* warehouse */
+  warehouseFills:{},
   buildWarehouse(){
-    const s=Scene.scene; const cx=-44, cz=0;
-    const cols={ steel:[0.6,0.62,0.68], electronics:[0.3,0.7,0.95], rubber:[0.2,0.2,0.24] };
+    const s=Scene.scene; const cx=-46, cz=0;
+    const cols={ steel:[0.62,0.64,0.7], electronics:[0.3,0.72,0.97], rubber:[0.18,0.18,0.22] };
     let i=0;
     for(const r of ['steel','electronics','rubber']){
       const x=cx-6+i*6, z=cz-6;
       const bin=BABYLON.MeshBuilder.CreateBox('bin_'+r,{width:4,height:4,depth:4},s);
-      bin.position.set(x,2,z); bin.material=Scene.mat('binm_'+r,cols[r][0]*0.7,cols[r][1]*0.7,cols[r][2]*0.7);
+      bin.position.set(x,2,z); bin.material=Scene.mat('binm_'+r,cols[r][0]*0.5,cols[r][1]*0.5,cols[r][2]*0.5,{spec:0.15});
       bin.checkCollisions=true; bin.freezeWorldMatrix(); bin.isPickable=false;
-      // fill indicator (scales with stock) — kept dynamic
       const fill=BABYLON.MeshBuilder.CreateBox('fill_'+r,{width:3.4,height:3.4,depth:3.4},s);
-      fill.position.set(x,1.9,z); fill.material=Scene.mat('fillm_'+r,cols[r][0],cols[r][1],cols[r][2],{emissive:true});
-      fill.isPickable=false; fill.metadata={res:r};
-      this.warehouseFills=this.warehouseFills||{}; this.warehouseFills[r]=fill;
-      this.makeSign(r.toUpperCase(), x, 5, z-2.4);
-      i++;
+      fill.position.set(x,1.9,z); fill.material=Scene.mat('fillm_'+r,cols[r][0],cols[r][1],cols[r][2],{emissive:0.35}); fill.isPickable=false;
+      this.warehouseFills[r]=fill; this.makeSign(r.toUpperCase(), x, 5, z-2.4); i++;
     }
-    this.interactables.push({ pos:new BABYLON.Vector3(cx,1,cz+4), radius:6, name:'Warehouse · Supply',
-      type:'warehouse', data:{}, mesh:null });
+    this.interactables.push({ pos:new BABYLON.Vector3(cx,1,cz+4), radius:6.5, name:'Warehouse · Supply', type:'warehouse', data:{}, mesh:null });
   },
 
-  /* ---------- research lab ---------- */
+  /* research lab */
+  labCore:null,
   buildResearchLab(){
-    const s=Scene.scene; const cx=-44, cz=-30;
-    const dome=BABYLON.MeshBuilder.CreateSphere('lab',{diameter:6,segments:10},s);
-    dome.position.set(cx,3,cz); dome.scaling.y=0.7;
-    dome.material=Scene.mat('labm',0.4,0.3,0.7,{emissive:true}); dome.material.alpha=0.9;
+    const s=Scene.scene; const cx=-46, cz=-32;
+    const dome=BABYLON.MeshBuilder.CreateSphere('lab',{diameter:6.5,segments:12},s);
+    dome.position.set(cx,3,cz); dome.scaling.y=0.72;
+    dome.material=Scene.mat('labm',0.4,0.3,0.72,{emissive:0.5}); dome.material.unfreeze(); dome.material.alpha=0.85; dome.material.freeze();
     dome.checkCollisions=true; dome.isPickable=false; dome.freezeWorldMatrix();
-    const core=BABYLON.MeshBuilder.CreateCylinder('labcore',{diameter:1.4,height:4,tessellation:8},s);
-    core.position.set(cx,2,cz); core.material=Scene.mat('labcorem',0.6,0.9,1,{emissive:true});
-    core.isPickable=false; this.labCore=core;
-    this.interactables.push({ pos:new BABYLON.Vector3(cx,1,cz+5), radius:6, name:'Research Lab',
-      type:'research', data:{}, mesh:null });
+    const core=BABYLON.MeshBuilder.CreateCylinder('labcore',{diameter:1.5,height:4.2,tessellation:8},s);
+    core.position.set(cx,2.1,cz); core.material=Scene.mat('labcorem',0.6,0.92,1,{unlit:true}); core.isPickable=false; this.labCore=core;
+    for(let a=0;a<3;a++){ const ring=BABYLON.MeshBuilder.CreateTorus('lr'+a,{diameter:3+a*1.2,thickness:0.12,tessellation:18},s);
+      ring.position.set(cx,1.5+a*1.1,cz); ring.material=Scene.mat('lrm'+a,0.5,0.8,1,{unlit:true}); ring.isPickable=false;
+      ring.rotation.x=Math.PI/2.3; }
+    this.interactables.push({ pos:new BABYLON.Vector3(cx,1,cz+5.5), radius:6.5, name:'Research Lab', type:'research', data:{}, mesh:null });
   },
 
-  /* ---------- shipping dock ---------- */
+  /* shipping dock */
   buildShippingDock(){
-    const s=Scene.scene; const cx=44, cz=0;
+    const s=Scene.scene; const cx=46, cz=0;
     for(let i=0;i<3;i++){
       const z=cz-8+i*8;
       const dock=BABYLON.MeshBuilder.CreateBox('dock',{width:6,height:1.2,depth:5},s);
-      dock.position.set(cx,0.6,z); dock.material=Scene.mat('dockm'+i,0.2,0.4,0.34);
+      dock.position.set(cx,0.6,z); dock.material=Scene.mat('dockm'+i,0.18,0.4,0.34,{spec:0.15});
       dock.checkCollisions=true; dock.isPickable=false; dock.freezeWorldMatrix();
-      // truck
-      const truck=BABYLON.MeshBuilder.CreateBox('truck',{width:3,height:2,depth:2.4},s);
-      truck.position.set(cx+5,1.4,z); truck.material=Scene.mat('truckm'+i,0.7,0.7,0.2);
-      truck.isPickable=false; truck.freezeWorldMatrix();
+      const cab=BABYLON.MeshBuilder.CreateBox('tc',{width:2,height:1.8,depth:2.4},s);
+      cab.position.set(cx+5.6,1.5,z); cab.material=Scene.mat('tcm'+i,0.75,0.72,0.2,{spec:0.2}); cab.isPickable=false; cab.freezeWorldMatrix();
+      const box=BABYLON.MeshBuilder.CreateBox('tb',{width:4,height:2.4,depth:2.6},s);
+      box.position.set(cx+8.5,1.5,z); box.material=Scene.mat('tbm'+i,0.5,0.52,0.58,{spec:0.15}); box.isPickable=false; box.freezeWorldMatrix();
     }
-    this.interactables.push({ pos:new BABYLON.Vector3(cx-5,1,cz+6), radius:6, name:'Shipping Dock',
-      type:'shipping', data:{}, mesh:null });
+    this.interactables.push({ pos:new BABYLON.Vector3(cx-5,1,cz+6), radius:6.5, name:'Shipping Dock', type:'shipping', data:{}, mesh:null });
   },
 
-  /* zone lock visuals based on factory size (simple gating) */
-  refreshZoneLocks(){ /* all zones available from start; expansion adds lines instead */ },
-
-  /* car instance pool (per category, so each car shows its category colour) */
+  /* car instance pool (per category) */
   acquireCar(category){
     const pool=this.carPools[category]||(this.carPools[category]=[]);
     let inst = pool.pop();
-    if(!inst){
-      const tpl=this.carTemplates[category]||this.carTemplates.economy;
-      inst = tpl.createInstance('carI_'+category+'_'+Math.random().toString(36).slice(2,7));
-      inst.metadata={cat:category};
-    }
-    inst.isVisible=true;
-    return inst;
+    if(!inst){ const tpl=this.carTemplates[category]||this.carTemplates.economy;
+      inst = tpl.createInstance('carI_'+category+'_'+Math.random().toString(36).slice(2,7)); inst.metadata={cat:category}; }
+    inst.isVisible=true; return inst;
   },
   releaseCar(inst){ if(!inst) return; inst.isVisible=false;
-    const cat=(inst.metadata&&inst.metadata.cat)||'economy';
-    (this.carPools[cat]||(this.carPools[cat]=[])).push(inst); },
+    const cat=(inst.metadata&&inst.metadata.cat)||'economy'; (this.carPools[cat]||(this.carPools[cat]=[])).push(inst); },
 };
 
 /* ====================================================================================
-   CAMERA SYSTEM  —  walk (follow) + management (arc)
+   CAMERA SYSTEM — walk (follow, smoothed) + management (arc)
    ==================================================================================== */
 const CameraSys = {
-  walkCam:null, arcCam:null, yaw:0, pitch:0.32, dist:8,
+  walkCam:null, arcCam:null, yaw:0, pitch:0.34, dist:9,
+  cur:{x:0,y:5,z:-14},
   init(){
     const s=Scene.scene;
-    this.walkCam = new BABYLON.FreeCamera('walk', new BABYLON.Vector3(0,3,-12), s);
-    this.walkCam.minZ=0.15; this.walkCam.maxZ=240; this.walkCam.fov=0.95;
-    this.arcCam = new BABYLON.ArcRotateCamera('arc', -Math.PI/2, 0.95, 70, new BABYLON.Vector3(0,0,0), s);
-    this.arcCam.lowerRadiusLimit=25; this.arcCam.upperRadiusLimit=140;
-    this.arcCam.upperBetaLimit=1.45; this.arcCam.minZ=0.5; this.arcCam.maxZ=400;
+    this.walkCam = new BABYLON.FreeCamera('walk', new BABYLON.Vector3(0,4,-14), s);
+    this.walkCam.minZ=0.15; this.walkCam.maxZ=320; this.walkCam.fov=0.95;
+    this.arcCam = new BABYLON.ArcRotateCamera('arc', -Math.PI/2, 0.92, 78, new BABYLON.Vector3(0,0,0), s);
+    this.arcCam.lowerRadiusLimit=28; this.arcCam.upperRadiusLimit=150;
+    this.arcCam.upperBetaLimit=1.45; this.arcCam.minZ=0.5; this.arcCam.maxZ=420;
     this.arcCam.panningSensibility=0; this.arcCam.wheelDeltaPercentage=0.01;
     s.activeCamera = this.walkCam;
   },
-  enterWalk(){
-    const s=Scene.scene;
-    this.arcCam.detachControl();
-    s.activeCamera=this.walkCam;
-    this.update(0);
-  },
-  enterManage(){
-    const s=Scene.scene;
-    s.activeCamera=this.arcCam;
-    this.arcCam.attachControl(Scene.canvas,true);
-  },
-  update(dt){
+  enterWalk(){ this.arcCam.detachControl(); Scene.scene.activeCamera=this.walkCam; this.snap(); this.update(0); },
+  enterManage(){ Scene.scene.activeCamera=this.arcCam; this.arcCam.attachControl(Scene.canvas,true); },
+  targetPos(){
     const p=Player.mesh.position;
     const cy=Math.cos(this.pitch), sy=Math.sin(this.pitch);
-    const fx=Math.sin(this.yaw), fz=Math.cos(this.yaw);
-    const r=this.dist*cy;
-    this.walkCam.position.x = p.x - fx*r;
-    this.walkCam.position.z = p.z - fz*r;
-    this.walkCam.position.y = p.y + 2.2 + this.dist*sy;
+    const fx=Math.sin(this.yaw), fz=Math.cos(this.yaw); const r=this.dist*cy;
+    return { x:clamp(p.x - fx*r,-63,63), y:clamp(p.y + 2.4 + this.dist*sy,1.2,40), z:clamp(p.z - fz*r,-46,46) };
+  },
+  snap(){ const t=this.targetPos(); this.cur.x=t.x; this.cur.y=t.y; this.cur.z=t.z; },
+  update(dt){
+    const t=this.targetPos();
+    const k=1-Math.pow(0.0001, dt||0.016);     // smoothing
+    this.cur.x=lerp(this.cur.x,t.x,k); this.cur.y=lerp(this.cur.y,t.y,k); this.cur.z=lerp(this.cur.z,t.z,k);
+    this.walkCam.position.set(this.cur.x,this.cur.y,this.cur.z);
+    const p=Player.mesh.position;
     this.walkCam.setTarget(new BABYLON.Vector3(p.x, p.y+1.3, p.z));
   },
-  // forward/right vectors on ground plane (for movement)
   forward(){ return {x:Math.sin(this.yaw), z:Math.cos(this.yaw)}; },
   right(){ return {x:Math.cos(this.yaw), z:-Math.sin(this.yaw)}; },
-  look(dx,dy){
-    this.yaw   -= dx*0.005;
-    this.pitch  = clamp(this.pitch + dy*0.004, 0.05, 1.15);
-  }
+  look(dx,dy){ this.yaw -= dx*0.005; this.pitch = clamp(this.pitch + dy*0.004, 0.04, 1.18); }
 };
 
 /* ====================================================================================
-   PLAYER CONTROLLER  —  capsule + joystick movement + collisions
+   PLAYER CONTROLLER — worker avatar + joystick + collisions
    ==================================================================================== */
 const Player = {
-  mesh:null, speed:9, joy:{x:0,y:0}, keys:{},
+  mesh:null, speed:9.5, joy:{x:0,y:0}, keys:{}, shadow:null, walkPhase:0, legs:[],
   init(){
     const s=Scene.scene;
-    const body=BABYLON.MeshBuilder.CreateCapsule('player',{height:2,radius:0.45,tessellation:8},s);
-    body.position.set(0,1,-12);
-    const m=new BABYLON.StandardMaterial('pm',s); m.diffuseColor=new BABYLON.Color3(0.95,0.8,0.2);
-    m.emissiveColor=new BABYLON.Color3(0.25,0.2,0.03); body.material=m;
-    body.checkCollisions=true;
-    body.ellipsoid=new BABYLON.Vector3(0.55,1,0.55);
-    body.ellipsoidOffset=new BABYLON.Vector3(0,1,0);
-    body.isPickable=false;
-    // little direction nose
-    const nose=BABYLON.MeshBuilder.CreateBox('nose',{width:0.3,height:0.3,depth:0.5},s);
-    nose.position.set(0,1.1,0.5); nose.parent=body;
-    nose.material=Scene.mat('nosem',0.2,0.2,0.25); nose.isPickable=false;
-    this.mesh=body;
+    const root=BABYLON.MeshBuilder.CreateBox('playerCol',{width:0.9,height:2,depth:0.6},s);
+    root.isVisible=false; root.position.set(0,1,-14);
+    root.checkCollisions=true; root.ellipsoid=new BABYLON.Vector3(0.55,1,0.55); root.ellipsoidOffset=new BABYLON.Vector3(0,1,0);
+    root.isPickable=false;
+    // visual worker
+    const vis=new BABYLON.TransformNode('pvis',s); vis.parent=root; vis.position.y=-1;
+    const torso=BABYLON.MeshBuilder.CreateBox('ptorso',{width:0.7,height:0.8,depth:0.45},s);
+    torso.position.y=1.25; torso.material=Scene.mat('pvest',0.95,0.62,0.1,{emissive:0.15}); torso.parent=vis; torso.isPickable=false;
+    const head=BABYLON.MeshBuilder.CreateSphere('phead',{diameter:0.42,segments:8},s);
+    head.position.y=1.85; head.material=Scene.mat('phead',0.85,0.68,0.55); head.parent=vis; head.isPickable=false;
+    const hat=BABYLON.MeshBuilder.CreateCylinder('phat',{diameterTop:0.36,diameterBottom:0.5,height:0.22,tessellation:10},s);
+    hat.position.y=2.04; hat.material=Scene.mat('phat',1,0.85,0.1,{emissive:0.2}); hat.parent=vis; hat.isPickable=false;
+    this.legs=[];
+    [-0.18,0.18].forEach((lx,i)=>{ const leg=BABYLON.MeshBuilder.CreateBox('pleg',{width:0.22,height:0.8,depth:0.26},s);
+      leg.position.set(lx,0.5,0); leg.material=Scene.mat('plegm',0.18,0.22,0.32); leg.parent=vis; leg.isPickable=false; this.legs.push(leg); });
+    [-0.45,0.45].forEach(ax=>{ const arm=BABYLON.MeshBuilder.CreateBox('parm',{width:0.16,height:0.7,depth:0.2},s);
+      arm.position.set(ax,1.2,0); arm.material=Scene.mat('parmm',0.85,0.55,0.08); arm.parent=vis; arm.isPickable=false; });
+    this.mesh=root;
+    this.shadow=Factory.blobShadow(2.0);
   },
   update(dt){
     if(Game.mode!=='walk') return;
     let ix=this.joy.x, iy=this.joy.y;
-    // keyboard fallback (desktop testing)
     if(this.keys['w']||this.keys['ArrowUp']) iy=1;
     if(this.keys['s']||this.keys['ArrowDown']) iy=-1;
     if(this.keys['a']||this.keys['ArrowLeft']) ix=-1;
     if(this.keys['d']||this.keys['ArrowRight']) ix=1;
     const f=CameraSys.forward(), r=CameraSys.right();
-    let mx = f.x*iy + r.x*ix;
-    let mz = f.z*iy + r.z*ix;
+    let mx=f.x*iy+r.x*ix, mz=f.z*iy+r.z*ix;
     const mag=Math.hypot(mx,mz);
-    if(mag>0.01){
-      mx/=mag; mz/=mag;
-      const sp=this.speed*dt;
+    if(mag>0.01){ mx/=mag; mz/=mag; const sp=this.speed*dt;
       this.mesh.moveWithCollisions(new BABYLON.Vector3(mx*sp,0,mz*sp));
-      this.mesh.rotation.y = Math.atan2(mx,mz);
-    }
-    // keep on ground plane
-    this.mesh.position.y = 1;
-    // clamp inside arena
-    this.mesh.position.x = clamp(this.mesh.position.x,-58,58);
-    this.mesh.position.z = clamp(this.mesh.position.z,-43,43);
+      this.mesh.rotation.y=Math.atan2(mx,mz);
+      this.walkPhase+=dt*10; const sw=Math.sin(this.walkPhase)*0.5;
+      if(this.legs[0]){ this.legs[0].rotation.x=sw; this.legs[1].rotation.x=-sw; }
+    } else if(this.legs[0]){ this.legs[0].rotation.x*=0.8; this.legs[1].rotation.x*=0.8; }
+    this.mesh.position.y=1;
+    this.mesh.position.x=clamp(this.mesh.position.x,-62,62);
+    this.mesh.position.z=clamp(this.mesh.position.z,-46,46);
+    if(this.shadow){ this.shadow.position.x=this.mesh.position.x; this.shadow.position.z=this.mesh.position.z; }
   }
 };
 
 /* ====================================================================================
-   SUPPLY CHAIN SYSTEM  —  resources, prices, contracts
+   WORKFORCE
+   ==================================================================================== */
+const Workforce = {
+  cap(){ return 8 + G.factory.sizeIdx*10 + (G.factory.secondFactory?10:0); },
+  needed(){ return Math.max(1, G.lines.length*(4 - (ResearchSystem.has('robotics')?1:0))); },
+  ratio(){ return clamp(G.workers/this.needed(), 0, 1.5); },
+  throughputMult(){ return clamp(0.55 + this.ratio()*0.55, 0.55, 1.25); },
+  defectMult(){ const r=this.ratio(); return r>=1 ? lerp(1,0.7,clamp(r-1,0,0.5)/0.5) : lerp(1.9,1,r); },
+  wagePerWorker(){ return 320; }, // per minute
+  wagesPerSec(){ return G.workers*this.wagePerWorker()/60; },
+  hire(n){ const c=this.cap(); if(G.workers+n>c){ UI.toast('Worker cap is '+c+' — expand factory to raise it','warn'); n=c-G.workers; }
+    if(n<=0) return; G.workers+=n; UI.toast('Hired '+n+' worker'+(n>1?'s':''),'good'); Sound.click(); },
+  fire(n){ n=Math.min(n,G.workers); if(n<=0) return; G.workers-=n; UI.toast('Released '+n+' worker'+(n>1?'s':''),'warn'); Sound.click(); },
+};
+
+/* ====================================================================================
+   MARKETING
+   ==================================================================================== */
+const Marketing = {
+  campaign(cost, mult, dur, repGain){
+    if(G.cash<cost){ UI.toast('Not enough cash for campaign','bad'); Sound.error(); return; }
+    G.cash-=cost; Economy.spend(cost);
+    G.marketing.ticks=Math.max(G.marketing.ticks,dur); G.marketing.mult=mult;
+    G.reputation=clamp(G.reputation+repGain,1,100);
+    UI.toast('Marketing campaign launched! +demand for '+dur+'s','good'); Sound.click();
+  }
+};
+
+/* ====================================================================================
+   EVENTS — random world events with temporary modifiers
+   ==================================================================================== */
+const EventSystem = {
+  tick(){
+    G.activeEffects.forEach(e=>e.ticks--);
+    G.activeEffects=G.activeEffects.filter(e=>e.ticks>0);
+    if(--G.eventTimer>0) return;
+    G.eventTimer=ri(45,85);
+    this.fire();
+  },
+  add(e){ G.activeEffects.push(e); },
+  fire(){
+    const roll=Math.random();
+    if(roll<0.18){ this.add({type:'res',res:'steel',mult:rnd(1.4,1.8),ticks:60,label:'Steel shortage'});
+      UI.toast('⚠ Global steel shortage — steel prices spike','event'); }
+    else if(roll<0.34){ const r=pick(['electronics','rubber']); this.add({type:'res',res:r,mult:rnd(1.3,1.6),ticks:55,label:r+' scarcity'});
+      UI.toast('⚠ '+r+' scarcity — prices rising','event'); }
+    else if(roll<0.52){ const c=pick(CATS); this.add({type:'demand',cat:c,mult:rnd(1.4,1.9),ticks:75,label:CAT_META[c].name+' demand surge'});
+      UI.toast('📈 Demand surge for '+CAT_META[c].name+'!','event'); }
+    else if(roll<0.64){ const g=ri(4,8); G.reputation=clamp(G.reputation+g,1,100);
+      UI.toast('⭐ Glowing reviews! Reputation +'+g,'good'); }
+    else if(roll<0.76){ if(G.reputation>35 && G.stats.carsSold>5){ const loss=ri(4,9); G.reputation=clamp(G.reputation-loss,1,100);
+      const fine=Math.round(G.cash*0.03); G.cash-=fine; Economy.spend(fine);
+      UI.toast('🔧 Vehicle recall — rep -'+loss+', fine '+fmtMoney(fine),'bad'); } }
+    else if(roll<0.86){ this.add({type:'slow',mult:1.4,ticks:35,label:'Power fluctuation'});
+      UI.toast('⚡ Power fluctuation slows production briefly','event'); }
+    else if(roll<0.95){ const grant=Math.round(20000+G.valuation*0.015); G.cash+=grant;
+      UI.toast('🏦 Government innovation grant: +'+fmtMoney(grant),'good'); }
+    else { this.add({type:'demand',cat:'all',mult:0.7,ticks:50,label:'Market jitters'});
+      UI.toast('📉 Market jitters dampen demand','event'); }
+  },
+  resMult(res){ let m=1; G.activeEffects.forEach(e=>{ if(e.type==='res'&&e.res===res) m*=e.mult; }); return m; },
+  demandMult(cat){ let m=1; G.activeEffects.forEach(e=>{ if(e.type==='demand'&&(e.cat===cat||e.cat==='all')) m*=e.mult; });
+    if(G.marketing.ticks>0) m*=G.marketing.mult; return m; },
+  slowMult(){ let m=1; G.activeEffects.forEach(e=>{ if(e.type==='slow') m*=e.mult; }); return m; },
+};
+
+/* ====================================================================================
+   SUPPLY CHAIN
    ==================================================================================== */
 const Supply = {
-  carCost(category){
-    const cm=CAT_META[category];
-    const r=G.resources;
+  carCost(design){
+    const cm=CAT_META[design.category], r=G.resources;
     const mat = cm.steel*r.steel.price + cm.elec*r.electronics.price + cm.rubber*r.rubber.price;
-    const d=G.design;
-    const build = 1500 + d.enginePower*40 + d.qualityTarget*55 + d.weight*8;
+    const build = 1500 + design.enginePower*40 + design.qualityTarget*55 + design.weight*8;
     return mat + build;
   },
-  canConsume(category){
-    const cm=CAT_META[category], r=G.resources;
-    return r.steel.amt>=cm.steel && r.electronics.amt>=cm.elec && r.rubber.amt>=cm.rubber;
-  },
-  consume(category){
-    const cm=CAT_META[category], r=G.resources;
-    r.steel.amt-=cm.steel; r.electronics.amt-=cm.elec; r.rubber.amt-=cm.rubber;
-  },
+  canConsume(design){ const cm=CAT_META[design.category], r=G.resources;
+    return r.steel.amt>=cm.steel && r.electronics.amt>=cm.elec && r.rubber.amt>=cm.rubber; },
+  consume(design){ const cm=CAT_META[design.category], r=G.resources;
+    r.steel.amt-=cm.steel; r.electronics.amt-=cm.elec; r.rubber.amt-=cm.rubber; },
   buy(res,qty){
-    const r=G.resources[res];
-    qty=Math.min(qty, r.cap-r.amt);
+    const r=G.resources[res]; qty=Math.min(qty, r.cap-r.amt);
     if(qty<=0){ UI.toast('Storage full for '+res,'warn'); return; }
-    const cost=qty*r.price;
-    if(G.cash<cost){ qty=Math.floor(G.cash/r.price); if(qty<=0){ UI.toast('Not enough cash','bad'); return; } }
-    G.cash-=qty*r.price; r.amt+=qty;
-    Economy.spend(qty*r.price);
+    if(G.cash<qty*r.price){ qty=Math.floor(G.cash/r.price); if(qty<=0){ UI.toast('Not enough cash','bad'); Sound.error(); return; } }
+    G.cash-=qty*r.price; r.amt+=qty; Economy.spend(qty*r.price); Sound.click();
     UI.toast('Bought '+qty+' '+res+' for '+fmtMoney(qty*r.price),'good');
-  },
-  capacity(){
-    // warehouse expansions scale caps
-    return G.factory.warehouseMult;
   },
   tickPrices(){
     for(const k in G.resources){
       const r=G.resources[k];
-      // random walk toward base with volatility + scarcity swings
-      const drift=(r.base-r.price)*0.04;
-      const vol=r.base*0.03*(Math.random()*2-1);
-      r.price=clamp(r.price+drift+vol, r.base*0.55, r.base*1.9);
+      const evBase=r.base*EventSystem.resMult(k);
+      const drift=(evBase-r.price)*0.05; const vol=r.base*0.03*(Math.random()*2-1);
+      r.price=clamp(r.price+drift+vol, r.base*0.55, r.base*2.4);
     }
   },
   tickContracts(){
-    G.contracts.forEach(c=>{
-      if(c.ticksLeft<=0) return;
-      const r=G.resources[c.res];
-      const space=r.cap-r.amt;
-      const qty=Math.min(c.qtyPerMin/60, space);   // per-second delivery
-      if(qty>0){
-        const cost=qty*c.price;
-        if(G.cash>=cost){ G.cash-=cost; Economy.spend(cost); r.amt+=qty; }
-      }
+    G.contracts.forEach(c=>{ if(c.ticksLeft<=0) return;
+      const r=G.resources[c.res]; const qty=Math.min(c.qtyPerMin/60, r.cap-r.amt);
+      if(qty>0){ const cost=qty*c.price; if(G.cash>=cost){ G.cash-=cost; Economy.spend(cost); r.amt+=qty; } }
       c.ticksLeft--;
     });
     G.contracts=G.contracts.filter(c=>c.ticksLeft>0);
   },
   signContract(res,qtyPerMin,ticks){
-    const r=G.resources[res];
-    const lockPrice=Math.round(r.price*0.92); // slight discount to lock
+    const r=G.resources[res]; const lockPrice=Math.round(r.price*0.9);
     G.contracts.push({res, price:lockPrice, qtyPerMin, ticksLeft:ticks});
-    UI.toast('Contract: '+qtyPerMin+'/min '+res+' @ '+fmtMoney(lockPrice),'good');
+    UI.toast('Contract: '+qtyPerMin+'/min '+res+' @ '+fmtMoney(lockPrice),'good'); Sound.click();
   },
-  autoRestock(){
-    if(G.factory.automation<1) return;
-    for(const k in G.resources){
-      const r=G.resources[k];
-      if(r.amt < r.cap*0.2){
-        const qty=Math.floor(Math.min(r.cap*0.3, r.cap-r.amt));
-        const cost=qty*r.price;
-        if(G.cash>=cost && qty>0){ G.cash-=cost; Economy.spend(cost); r.amt+=qty; }
-      }
-    }
+  autoRestock(){ if(G.factory.automation<1) return;
+    for(const k in G.resources){ const r=G.resources[k];
+      if(r.amt<r.cap*0.2){ const qty=Math.floor(Math.min(r.cap*0.3, r.cap-r.amt)); const cost=qty*r.price;
+        if(G.cash>=cost && qty>0){ G.cash-=cost; Economy.spend(cost); r.amt+=qty; } } }
   }
 };
 
 /* ====================================================================================
-   PRODUCTION SYSTEM  —  assembly-line pipeline
+   PRODUCTION SYSTEM
    ==================================================================================== */
 const Production = {
   carSeq:1,
   stageTime(lineId,stageKey){
-    const def=STAGE_DEFS.find(s=>s.key===stageKey);
-    const lv=machineLevel(lineId,stageKey);
+    const def=STAGE_DEFS.find(s=>s.key===stageKey); const lv=machineLevel(lineId,stageKey);
     const lvMult=1/(1+(lv-1)*0.18);
-    return def.time*lvMult*ResearchSystem.stageTimeMult();
+    return def.time*lvMult*ResearchSystem.stageTimeMult()*EventSystem.slowMult()/Workforce.throughputMult();
   },
   defectChance(lineId,stageKey){
-    const lv=machineLevel(lineId,stageKey);
-    const base=0.10/(1+(lv-1)*0.4);
-    return base*ResearchSystem.defectMult();
+    const lv=machineLevel(lineId,stageKey); const base=0.10/(1+(lv-1)*0.4);
+    return clamp(base*ResearchSystem.defectMult()*Workforce.defectMult(),0,0.6);
   },
   tick(dt){
     G.lines.forEach(line=>{
       const slots=line.slots;
-      // advance from last stage to first so a freed slot can be filled the same tick
       for(let i=slots.length-1;i>=0;i--){
-        const car=slots[i];
-        if(!car) continue;
-        const st=STAGE_DEFS[i];
-        car.t += dt;
-        const need=this.stageTime(line.id,st.key);
+        const car=slots[i]; if(!car) continue; const st=STAGE_DEFS[i];
+        car.t+=dt; const need=this.stageTime(line.id,st.key);
         if(car.t>=need){
-          // stage complete — roll defect
-          if(Math.random()<this.defectChance(line.id,st.key)){
-            car.quality=clamp(car.quality - ri(6,14),5,100);
-          }
-          if(i===slots.length-1){
-            // shipping done -> sell
-            this.finishCar(car);
-            slots[i]=null;
-          } else if(!slots[i+1]){
-            slots[i+1]=car; slots[i]=null; car.t=0;
-          } // else blocked, wait
+          if(Math.random()<this.defectChance(line.id,st.key)){ car.quality=clamp(car.quality-ri(6,14),5,100); G.stats.defects++; }
+          if(i===slots.length-1){ this.finishCar(car); slots[i]=null; }
+          else if(!slots[i+1]){ slots[i+1]=car; slots[i]=null; car.t=0; }
         }
       }
-      // feed new car into first stage
       if(!slots[0]){
-        const cat=G.design.category;
-        if(Supply.canConsume(cat)){
-          Supply.consume(cat);
-          const car={
-            id:this.carSeq++, category:cat,
-            quality:clamp(G.design.qualityTarget+ResearchSystem.qualityBonus()+ri(-4,4),5,100),
-            cost:Supply.carCost(cat), t:0, mesh:Factory.acquireCar(cat)
-          };
-          slots[0]=car; G.stats.carsBuilt++;
+        const d=line.design;
+        if(Supply.canConsume(d)){
+          Supply.consume(d);
+          slots[0]={ id:this.carSeq++, category:d.category,
+            quality:clamp(d.qualityTarget+ResearchSystem.qualityBonus()+ri(-4,4),5,100),
+            cost:Supply.carCost(d), t:0, mesh:Factory.acquireCar(d.category) };
+          G.stats.carsBuilt++;
         }
       }
     });
   },
-  // place car instance at its current stage position (called each render frame for smoothness)
   syncPositions(){
     G.lines.forEach((line,li)=>{
       const anchors=Factory.lineAnchors[li]; if(!anchors) return;
       line.slots.forEach((car,si)=>{
         if(!car||!car.mesh) return;
-        const a=anchors[si];
-        const need=this.stageTime(line.id,STAGE_DEFS[si].key);
+        const a=anchors[si]; const need=this.stageTime(line.id,STAGE_DEFS[si].key);
         const prog=clamp(car.t/need,0,1);
-        // slide within the stage toward next anchor for a sense of motion
-        const nx = (si<anchors.length-1)?anchors[si+1].x:a.x+5;
-        car.mesh.position.x = lerp(a.x, nx, prog*0.45);
-        car.mesh.position.y = 0.05;
-        car.mesh.position.z = a.z+1.6;
-        car.mesh.rotation.y = Math.PI/2;
+        const nx=(si<anchors.length-1)?anchors[si+1].x:a.x+5;
+        car.mesh.position.x=lerp(a.x,nx,prog*0.5); car.mesh.position.y=0.04; car.mesh.position.z=a.z+1.7;
+        car.mesh.rotation.y=Math.PI/2;
       });
     });
   },
-  finishCar(car){
-    Factory.releaseCar(car.mesh); car.mesh=null;
-    Economy.sellCar(car);
-  }
+  finishCar(car){ Factory.releaseCar(car.mesh); car.mesh=null; Economy.sellCar(car); }
 };
 
 /* ====================================================================================
-   ECONOMY SYSTEM  —  dynamic market, pricing, profit, valuation, loans
+   ECONOMY
    ==================================================================================== */
 const Economy = {
   earn(v){ G.cash+=v; G.profit.windowRev+=v; G.stats.revenue+=v; },
   spend(v){ G.profit.windowCost+=v; },
   sellCar(car){
     const cm=CAT_META[car.category], mk=G.market[car.category];
-    const qFactor = 0.55 + (car.quality/100)*0.9;       // quality 0..100 -> 0.55..1.45
-    const repFactor = 0.7 + (G.reputation/100)*0.6;     // rep -> 0.7..1.3
-    const satFactor = clamp(1 - mk.sat*0.5, 0.45, 1.0);  // saturation discount
-    const price = mk.price * qFactor * repFactor * satFactor * ResearchSystem.sellMult();
-    const profit = price - car.cost;
-    this.earn(price);
-    G.stats.carsSold++;
-    mk.sat = clamp(mk.sat + 0.05, 0, 1.6);               // each sale saturates market a bit
-    // reputation drifts toward quality
-    G.reputation = clamp(G.reputation + (car.quality-G.reputation)*0.01 + (profit>0?0.02:-0.04), 1, 100);
+    const qFactor=0.55+(car.quality/100)*0.9;
+    const repFactor=0.7+(G.reputation/100)*0.6;
+    const satFactor=clamp(1-mk.sat*0.5,0.45,1.0);
+    const price=mk.price*qFactor*repFactor*satFactor*ResearchSystem.sellMult();
+    const profit=price-car.cost;
+    this.earn(price); G.stats.carsSold++;
+    mk.sat=clamp(mk.sat+0.05,0,1.6);
+    G.reputation=clamp(G.reputation+(car.quality-G.reputation)*0.01+(profit>0?0.02:-0.04),1,100);
     G.lastSale={cat:car.category, price, profit, q:car.quality};
+    Sound.sale(profit>0);
   },
   tickMarket(){
-    // economy state transitions
     const e=G.economy; e.timer--;
-    if(e.timer<=0){
-      const roll=Math.random();
-      e.state = roll<0.25?'recession': roll<0.7?'stable':'boom';
-      e.timer = ri(70,140);
-      e.demandMult = e.state==='boom'?1.3 : e.state==='recession'?0.7 : 1.0;
-      UI.toast('Market shift: '+e.state.toUpperCase(),
-        e.state==='boom'?'good':e.state==='recession'?'bad':'warn');
+    if(e.timer<=0){ const roll=Math.random();
+      e.state=roll<0.25?'recession':roll<0.7?'stable':'boom'; e.timer=ri(70,140);
+      e.demandMult=e.state==='boom'?1.3:e.state==='recession'?0.7:1.0;
+      UI.toast('Market shift: '+e.state.toUpperCase(), e.state==='boom'?'good':e.state==='recession'?'bad':'warn');
     }
-    // price equilibrium per category
-    CATS.forEach(c=>{
-      const mk=G.market[c], meta=CAT_META[c];
-      mk.sat = clamp(mk.sat*0.97 - 0.002, 0, 1.6);        // saturation decays
-      const demand = meta.baseDemand * e.demandMult;
-      // equilibrium: high demand & low saturation -> price rises toward 1.4x base
-      const targetMult = clamp(0.7 + demand*0.03 - mk.sat*0.35, 0.55, 1.45);
-      const target = meta.basePrice*targetMult;
-      mk.price = lerp(mk.price, target, 0.06);
-      mk.demand = demand;
+    CATS.forEach(c=>{ const mk=G.market[c], meta=CAT_META[c];
+      mk.sat=clamp(mk.sat*0.97-0.002,0,1.6);
+      const demand=meta.baseDemand*e.demandMult*EventSystem.demandMult(c);
+      const targetMult=clamp(0.7+demand*0.03-mk.sat*0.35,0.55,1.5);
+      mk.price=lerp(mk.price,meta.basePrice*targetMult,0.06); mk.demand=demand;
     });
   },
-  tickProfit(now){
-    if(now - G.profit.lastReset >= 60){
-      G.profit.ppm = G.profit.windowRev - G.profit.windowCost;
-      G.profit.windowRev=0; G.profit.windowCost=0; G.profit.lastReset=now;
-    }
-  },
-  tickDebt(){
-    if(G.debt>0){
-      const interest=G.debt*0.0005;  // per second (~3%/min)
-      G.debt+=interest;
-    }
-  },
+  tickProfit(now){ if(now-G.profit.lastReset>=60){ G.profit.ppm=G.profit.windowRev-G.profit.windowCost;
+    G.profit.windowRev=0; G.profit.windowCost=0; G.profit.lastReset=now; } },
+  tickDebt(){ if(G.debt>0) G.debt+=G.debt*0.0005; },
   valuation(){
-    let assets=G.cash;
-    assets += G.lines.length*120000;
-    assets += G.factory.sizeIdx*250000;
-    assets += (G.reputation-50)*4000;
-    assets += Object.values(G.resources).reduce((s,r)=>s+r.amt*r.price,0);
-    assets += Object.keys(G.research.unlocked).length*60000;
-    return assets - G.debt;
+    let a=G.cash; a+=G.lines.length*120000; a+=G.factory.sizeIdx*250000; a+=(G.reputation-50)*4000;
+    a+=Object.values(G.resources).reduce((s,r)=>s+r.amt*r.price,0); a+=Object.keys(G.research.unlocked).length*60000;
+    a+=G.workers*8000; if(G.factory.secondFactory)a+=2000000; return a-G.debt;
   },
-  takeLoan(amt){ G.cash+=amt; G.debt+=amt; UI.toast('Loan +'+fmtMoney(amt),'warn'); },
-  repay(amt){ amt=Math.min(amt,G.debt,G.cash); if(amt<=0){UI.toast('Nothing to repay','warn');return;} G.cash-=amt; G.debt-=amt; UI.toast('Repaid '+fmtMoney(amt),'good'); }
+  takeLoan(amt){ G.cash+=amt; G.debt+=amt; UI.toast('Loan +'+fmtMoney(amt),'warn'); Sound.click(); },
+  repay(amt){ amt=Math.min(amt,G.debt,G.cash); if(amt<=0){ UI.toast('Nothing to repay','warn'); return; }
+    G.cash-=amt; G.debt-=amt; UI.toast('Repaid '+fmtMoney(amt),'good'); Sound.click(); }
 };
 
 /* ====================================================================================
-   AI SYSTEM  —  competitor companies
+   AI COMPETITORS
    ==================================================================================== */
 const AISys = {
   tick(){
     let shareSum=0;
     G.ai.forEach(a=>{
-      const mk=G.market[a.focus], meta=CAT_META[a.focus];
-      // production scaled by strategy & economy
-      const out = a.prod * (G.economy.state==='boom'?1.3:G.economy.state==='recession'?0.7:1) ;
-      // they saturate their focus market
-      mk.sat = clamp(mk.sat + out*0.012, 0, 1.6);
-      // pricing strategy affects their rep & cash
+      const mk=G.market[a.focus];
+      const out=a.prod*(G.economy.state==='boom'?1.3:G.economy.state==='recession'?0.7:1);
+      mk.sat=clamp(mk.sat+out*0.012,0,1.6);
       if(a.strat==='aggressive'){ a.share+=0.0008; a.rep=clamp(a.rep-0.01,30,90); a.cash+=out*8000; mk.price*=0.999; }
       else if(a.strat==='premium'){ a.rep=clamp(a.rep+0.02,30,95); a.share+=0.0003; a.cash+=out*16000; }
       else { a.rep=clamp(a.rep+0.005,30,92); a.share+=0.0005; a.cash+=out*11000; }
-      // expand factory occasionally
       if(a.cash>800000 && Math.random()<0.01){ a.prod+=0.15; a.cash-=400000; a.share+=0.01; }
-      a.share=clamp(a.share,0.02,0.5);
-      shareSum+=a.share;
+      a.share=clamp(a.share,0.02,0.5); shareSum+=a.share;
     });
-    // player's share is the remainder, influenced by reputation & sales
-    G._playerShare = clamp(1-shareSum,0.02,0.7);
-    // normalise if AI overflow
+    G._playerShare=clamp(1-shareSum,0.02,0.7);
     if(shareSum>0.92){ const k=0.92/shareSum; G.ai.forEach(a=>a.share*=k); }
   }
 };
@@ -943,95 +1078,181 @@ const AISys = {
    FACTORY EXPANSION
    ==================================================================================== */
 const Expansion = {
-  lineCost(){ const base=180000*Math.pow(1.7,G.lines.length-1); return Math.round(base*(ResearchSystem.has('megafac')?0.7:1)); },
+  lineCost(){ return Math.round(180000*Math.pow(1.7,G.lines.length-1)*(ResearchSystem.has('megafac')?0.7:1)); },
   addLine(){
     const c=this.lineCost();
-    if(G.cash<c){ UI.toast('Need '+fmtMoney(c)+' for new line','bad'); return; }
-    if(G.lines.length>=6){ UI.toast('Max lines in this factory','warn'); return; }
+    if(G.cash<c){ UI.toast('Need '+fmtMoney(c)+' for new line','bad'); Sound.error(); return; }
+    if(G.lines.length>=8){ UI.toast('Max lines reached','warn'); return; }
     G.cash-=c; Economy.spend(c);
-    G.lines.push(makeLine(G.lines.length));
-    Factory.buildProductionLines();
-    UI.toast('New production line built!','good');
+    const d=JSON.parse(JSON.stringify(G.lines[G.lines.length-1].design)); d.name='Model '+String.fromCharCode(65+G.lines.length);
+    G.lines.push(makeLine(G.lines.length,d)); Factory.buildProductionLines();
+    UI.toast('New production line built!','good'); Sound.upgrade();
   },
   warehouseCost(){ return Math.round(80000*Math.pow(1.6,G.factory.warehouseMult-1)); },
-  expandWarehouse(){
-    const c=this.warehouseCost();
-    if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); return; }
+  expandWarehouse(){ const c=this.warehouseCost();
+    if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); Sound.error(); return; }
     G.cash-=c; Economy.spend(c); G.factory.warehouseMult++;
-    for(const k in G.resources){ G.resources[k].cap=Math.round(G.resources[k].cap*1.4); }
-    UI.toast('Warehouse expanded','good');
-  },
-  sizeCost(){ const base=[0,500000,1500000,5000000,15000000][G.factory.sizeIdx+1]||Infinity;
-    return Math.round(base*(ResearchSystem.has('megafac')?0.75:1)); },
+    for(const k in G.resources) G.resources[k].cap=Math.round(G.resources[k].cap*1.4);
+    UI.toast('Warehouse expanded','good'); Sound.upgrade(); },
+  sizeCost(){ return Math.round(([0,500000,1500000,5000000,15000000][G.factory.sizeIdx+1]||Infinity)*(ResearchSystem.has('megafac')?0.75:1)); },
   upgradeSize(){
     if(G.factory.sizeIdx>=SIZES.length-1){ UI.toast('Already a Global Empire!','good'); return; }
     if(G.factory.sizeIdx>=2 && !ResearchSystem.has('megafac')){ UI.toast('Research Mega Factory first','warn'); return; }
-    const c=this.sizeCost();
-    if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); return; }
-    G.cash-=c; Economy.spend(c); G.factory.sizeIdx++;
-    G.reputation=clamp(G.reputation+3,1,100);
-    UI.toast('Factory upgraded to '+SIZES[G.factory.sizeIdx]+'!','good');
-  },
+    const c=this.sizeCost(); if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); Sound.error(); return; }
+    G.cash-=c; Economy.spend(c); G.factory.sizeIdx++; G.reputation=clamp(G.reputation+3,1,100);
+    UI.toast('Factory upgraded to '+SIZES[G.factory.sizeIdx]+'!','good'); Sound.upgrade(); },
   buildSecondFactory(){
     if(G.factory.secondFactory){ UI.toast('Second factory already built','warn'); return; }
     if(!ResearchSystem.has('megafac')){ UI.toast('Research Mega Factory first','warn'); return; }
-    const c=8000000;
-    if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); return; }
+    const c=8000000; if(G.cash<c){ UI.toast('Need '+fmtMoney(c),'bad'); Sound.error(); return; }
     G.cash-=c; Economy.spend(c); G.factory.secondFactory=true;
-    // add two lines representing the new facility
-    G.lines.push(makeLine(G.lines.length)); G.lines.push(makeLine(G.lines.length));
+    const d1=DEFAULT_DESIGN(); d1.name='Model '+String.fromCharCode(65+G.lines.length); G.lines.push(makeLine(G.lines.length,d1));
+    const d2=DEFAULT_DESIGN(); d2.name='Model '+String.fromCharCode(65+G.lines.length); G.lines.push(makeLine(G.lines.length,d2));
     Factory.buildProductionLines();
-    UI.toast('Second factory online! +2 lines','good');
-  }
+    UI.toast('Second factory online! +2 lines','good'); Sound.upgrade(); }
 };
 
 /* ====================================================================================
-   MACHINE UPGRADES (physical, in-world)
+   MACHINE UPGRADES
    ==================================================================================== */
 const Machines = {
-  upgradeCost(lineId,stageKey){ const lv=machineLevel(lineId,stageKey); return Math.round(20000*Math.pow(1.6,lv-1)); },
+  upgradeCost(lineId,stageKey){ return Math.round(20000*Math.pow(1.6,machineLevel(lineId,stageKey)-1)); },
   upgrade(lineId,stageKey){
     const lv=machineLevel(lineId,stageKey);
     if(lv>=8){ UI.toast('Machine at max level','warn'); return false; }
     const c=this.upgradeCost(lineId,stageKey);
-    if(G.cash<c){ UI.toast('Need '+fmtMoney(c)+' to upgrade','bad'); return false; }
+    if(G.cash<c){ UI.toast('Need '+fmtMoney(c)+' to upgrade','bad'); Sound.error(); return false; }
     G.cash-=c; Economy.spend(c); setMachineLevel(lineId,stageKey,lv+1);
-    // grow the machine top a touch as feedback
-    const mm=Factory.machineMeshes[mlKey(lineId,stageKey)];
-    if(mm&&mm.top){ mm.top.scaling.y = 1+(lv)*0.08; }
-    UI.toast(STAGE_DEFS.find(s=>s.key===stageKey).name+' → Lv '+(lv+1),'good');
-    return true;
+    const mm=Factory.machineMeshes[mlKey(lineId,stageKey)]; if(mm&&mm.top) mm.top.scaling.y=1+lv*0.08;
+    UI.toast(STAGE_DEFS.find(s=>s.key===stageKey).name+' → Lv '+(lv+1),'good'); Sound.upgrade(); return true;
   }
 };
 
 /* ====================================================================================
-   GAME LOOP  —  central deterministic 1s simulation tick + render-frame updates
+   OBJECTIVES / PROGRESSION
+   ==================================================================================== */
+const OBJECTIVES = [
+  { desc:'Build your first 5 cars', check:()=>G.stats.carsBuilt>=5, reward:{cash:20000} },
+  { desc:'Sell 10 cars', check:()=>G.stats.carsSold>=10, reward:{cash:30000} },
+  { desc:'Reach reputation 60', check:()=>G.reputation>=60, reward:{rp:30} },
+  { desc:'Unlock any research', check:()=>Object.keys(G.research.unlocked).length>=1, reward:{cash:50000} },
+  { desc:'Build a 2nd production line', check:()=>G.lines.length>=2, reward:{cash:60000} },
+  { desc:'Hire 10 workers', check:()=>G.workers>=10, reward:{cash:40000} },
+  { desc:'Reach $1M cash', check:()=>G.cash>=1000000, reward:{rp:50} },
+  { desc:'Unlock Electric vehicles', check:()=>ResearchSystem.has('ev'), reward:{cash:100000} },
+  { desc:'Upgrade factory to Large', check:()=>G.factory.sizeIdx>=2, reward:{cash:200000} },
+  { desc:'Reach $10M company valuation', check:()=>G.valuation>=10000000, reward:{rp:100} },
+  { desc:'Become a Global Empire valued at $50M', check:()=>G.factory.sizeIdx>=4 && G.valuation>=50000000, reward:{}, win:true },
+];
+const Objectives = {
+  current(){ return OBJECTIVES[G.objIndex]; },
+  tick(){
+    if(G.objIndex>=OBJECTIVES.length) return;
+    const o=OBJECTIVES[G.objIndex];
+    if(o.check()){
+      if(o.reward.cash){ G.cash+=o.reward.cash; }
+      if(o.reward.rp){ G.researchPoints+=o.reward.rp; }
+      const rw=[]; if(o.reward.cash)rw.push(fmtMoney(o.reward.cash)); if(o.reward.rp)rw.push(o.reward.rp+' RP');
+      UI.toast('🎯 Objective complete: '+o.desc+(rw.length?'  (+'+rw.join(', ')+')':''),'good'); Sound.objective();
+      G.objIndex++;
+      if(o.win){ G.won=true; Game.victory(); }
+    }
+  }
+};
+
+/* ====================================================================================
+   SOUND (WebAudio, no asset files)
+   ==================================================================================== */
+const Sound = {
+  ctx:null, master:null, on:true, lastSale:0,
+  init(){
+    if(this.ctx) return;
+    try{ this.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      this.master=this.ctx.createGain(); this.master.gain.value=this.on?0.5:0; this.master.connect(this.ctx.destination);
+      this.startHum();
+    }catch(e){ this.ctx=null; }
+  },
+  resume(){ if(this.ctx&&this.ctx.state==='suspended') this.ctx.resume(); },
+  setOn(v){ this.on=v; if(this.master) this.master.gain.value=v?0.5:0; G.settings.sound=v;
+    document.getElementById('soundBtn').textContent=v?'🔊':'🔇'; },
+  tone(freq,dur,type,vol,when){ if(!this.on||!this.ctx) return;
+    const t0=this.ctx.currentTime+(when||0);
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type=type||'sine'; o.frequency.setValueAtTime(freq,t0);
+    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime((vol||0.2),t0+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(g); g.connect(this.master); o.start(t0); o.stop(t0+dur+0.02);
+  },
+  click(){ this.tone(420,0.06,'square',0.12); },
+  upgrade(){ this.tone(520,0.1,'triangle',0.18); this.tone(780,0.12,'triangle',0.14,0.07); },
+  research(){ [440,660,880].forEach((f,i)=>this.tone(f,0.14,'triangle',0.16,i*0.08)); },
+  objective(){ [523,659,784,1046].forEach((f,i)=>this.tone(f,0.16,'sine',0.18,i*0.09)); },
+  error(){ this.tone(160,0.18,'sawtooth',0.16); },
+  sale(profit){ const now=performance.now(); if(now-this.lastSale<160) return; this.lastSale=now;
+    this.tone(profit?880:330,0.08,'sine',0.14); this.tone(profit?1180:280,0.1,'sine',0.1,0.05); },
+  startHum(){ if(!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain(), f=this.ctx.createBiquadFilter();
+    o.type='sawtooth'; o.frequency.value=55; f.type='lowpass'; f.frequency.value=180;
+    g.gain.value=0.04; o.connect(f); f.connect(g); g.connect(this.master); o.start();
+    const lfo=this.ctx.createOscillator(), lg=this.ctx.createGain(); lfo.frequency.value=0.2; lg.gain.value=0.015;
+    lfo.connect(lg); lg.connect(g.gain); lfo.start();
+  }
+};
+
+/* ====================================================================================
+   MINIMAP
+   ==================================================================================== */
+const MiniMap = {
+  cv:null, ctx:null, acc:0,
+  init(){ this.cv=document.getElementById('minimap'); this.ctx=this.cv.getContext('2d'); },
+  W(){ return this.cv.width; }, H(){ return this.cv.height; },
+  m(x,z){ return [ (x+65)/130*this.W(), (46-z)/92*this.H() ]; },
+  draw(dt){
+    this.acc+=dt; if(this.acc<0.12) return; this.acc=0;
+    const c=this.ctx, W=this.W(), H=this.H(); c.clearRect(0,0,W,H);
+    c.fillStyle='rgba(12,18,28,0.85)'; c.fillRect(0,0,W,H);
+    const zone=(cx,cz,w,d,col)=>{ const [x,y]=this.m(cx-w/2,cz+d/2); c.fillStyle=col; c.fillRect(x,y,w/130*W,d/92*H); };
+    zone(0,0,48,28,'rgba(50,90,150,0.5)'); zone(-46,0,22,34,'rgba(150,100,50,0.5)');
+    zone(-46,-32,22,18,'rgba(110,70,160,0.5)'); zone(46,0,22,30,'rgba(50,150,110,0.5)');
+    // machines
+    c.fillStyle='#ffd24a';
+    Factory.lineAnchors.forEach(anchs=>anchs.forEach(a=>{ const [x,y]=this.m(a.x,a.z); c.fillRect(x-1.5,y-1.5,3,3); }));
+    // player arrow
+    const p=Player.mesh.position; const [px,py]=this.m(p.x,p.z);
+    c.save(); c.translate(px,py); c.rotate(-Player.mesh.rotation.y);
+    c.fillStyle='#4ea1ff'; c.beginPath(); c.moveTo(0,-7); c.lineTo(5,6); c.lineTo(0,3); c.lineTo(-5,6); c.closePath(); c.fill();
+    c.restore();
+  }
+};
+
+/* ====================================================================================
+   GAME LOOP
    ==================================================================================== */
 const Game = {
-  mode:'walk', acc:0, running:false, lastSave:0, animT:0,
+  mode:'walk', acc:0, running:false, lastSave:0, animT:0, fpsAcc:0,
+  perf:{ t:0, sum:0, n:0, checked:false },
   start(){
-    Scene.init();
-    CameraSys.init();
-    Player.init();
-    Factory.build();
-    Input.init();
-    UI.init();
+    Scene.init(); CameraSys.init(); Player.init(); Factory.build(); Input.init(); UI.init(); MiniMap.init();
     SaveSys.load();
-    Factory.buildProductionLines();   // rebuild to match loaded line count
+    Factory.buildProductionLines();
+    Sound.setOn(G.settings.sound); Scene.applyQuality();
     this.running=true;
 
     Scene.scene.registerBeforeRender(()=>{
-      const dt=Math.min(Scene.engine.getDeltaTime()/1000, 0.1);
-      this.animT+=dt;
+      const dt=Math.min(Scene.engine.getDeltaTime()/1000,0.1); this.animT+=dt;
       Player.update(dt);
-      if(this.mode==='walk'){ CameraSys.update(dt); Interact.update(); }
+      if(this.mode==='walk'){ CameraSys.update(dt); Interact.update(); MiniMap.draw(dt); }
       Production.syncPositions();
       this.animateWorld(dt);
-      // fixed 1s simulation
-      this.acc+=dt;
-      while(this.acc>=1){ this.acc-=1; this.simTick(); }
+      this.acc+=dt; while(this.acc>=1){ this.acc-=1; this.simTick(); }
+      if(G.settings.fps){ this.fpsAcc+=dt; if(this.fpsAcc>0.4){ this.fpsAcc=0; document.getElementById('fps').textContent=Math.round(Scene.engine.getFps())+' fps'; } }
+      // adaptive performance: sample early FPS, drop to low quality on weak devices
+      if(!this.perf.checked && this.animT>2){ this.perf.t+=dt; this.perf.sum+=Scene.engine.getFps(); this.perf.n++;
+        if(this.perf.t>4){ this.perf.checked=true; const avg=this.perf.sum/Math.max(1,this.perf.n);
+          if(avg<28 && G.settings.quality==='high'){ G.settings.quality='low'; Scene.applyQuality();
+            UI.toast('Performance mode enabled for smoother play','warn'); } } }
     });
-    Scene.engine.runRenderLoop(()=>{ Scene.scene.render(); });
+    Scene.engine.runRenderLoop(()=>Scene.scene.render());
     window.addEventListener('resize',()=>Scene.engine.resize());
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) Scene.engine.resize(); });
   },
@@ -1039,326 +1260,269 @@ const Game = {
   simTick(){
     G.stats.time++;
     Production.tick(1);
-    Supply.tickPrices();
-    Supply.tickContracts();
-    Supply.autoRestock();
-    Economy.tickMarket();
-    Economy.tickDebt();
-    AISys.tick();
+    Supply.tickPrices(); Supply.tickContracts(); Supply.autoRestock();
+    Economy.tickMarket(); Economy.tickDebt();
+    AISys.tick(); EventSystem.tick();
+    if(G.marketing.ticks>0) G.marketing.ticks--;
+    const wages=Workforce.wagesPerSec(); G.cash-=wages; Economy.spend(wages);
     G.researchPoints += this.rpRate();
     Economy.tickProfit(G.stats.time);
     G.valuation=Economy.valuation();
-    // bankruptcy guard
-    if(G.cash<0 && G.debt<=0){ /* allow negative briefly */ }
+    Objectives.tick();
+    if(G.cash<-400000 && !G.won){ this.defeat(); }
     UI.refreshHud();
-    if(this.mode==='manage') UI.renderTab(UI.tab);   // live-update open panel
-    // autosave
-    if(G.stats.time - this.lastSave >= 45){ SaveSys.save(); this.lastSave=G.stats.time; }
+    if(this.mode==='manage') UI.renderTab(UI.tab);
+    if(G.stats.time-this.lastSave>=45){ SaveSys.save(); this.lastSave=G.stats.time; }
   },
-  rpRate(){ // research lab generation; scales with factory size + automation
-    return 0.4 + G.factory.sizeIdx*0.25 + G.factory.automation*0.3;
-  },
+  rpRate(){ return 0.4 + G.factory.sizeIdx*0.25 + G.factory.automation*0.3 + (G.factory.secondFactory?0.4:0); },
 
   animateWorld(dt){
-    // machine arms bob, glow rings pulse, conveyor cars handled elsewhere
     const t=this.animT;
     for(const k in Factory.machineMeshes){
       const mm=Factory.machineMeshes[k];
-      if(mm.arm){ mm.arm.rotation.x = Math.sin(t*2+mm.x)*0.3; }
+      // determine if a car is present at this machine's stage
+      let busy=false, qcLow=false;
+      const parts=k.split('-'); const lineId=parseInt(parts[0]); const stageKey=parts.slice(1).join('-');
+      const line=G.lines.find(l=>l.id===lineId);
+      if(line){ const si=STAGE_DEFS.findIndex(s=>s.key===stageKey); const car=line.slots[si]; busy=!!car; if(car&&car.quality<55)qcLow=true; }
+      if(mm.armPivot){ const target=busy?(0.5+Math.sin(t*6)*0.35):0.05; mm.armPivot.rotation.x=lerp(mm.armPivot.rotation.x,target,0.15); }
+      if(mm.sparks) mm.sparks.emitRate = (busy && Factory.particlesOn)? (stageKey==='qc'?(qcLow?30:8):26) : 0;
+      if(mm.mist) mm.mist.emitRate = (busy && Factory.particlesOn)? 24 : 0;
     }
-    if(Factory.labCore){ Factory.labCore.rotation.y += dt*1.2; }
-    // warehouse fill scaling
-    if(Factory.warehouseFills){
-      for(const r in Factory.warehouseFills){
-        const f=Factory.warehouseFills[r], res=G.resources[r];
-        const frac=clamp(res.amt/res.cap,0.05,1);
-        f.scaling.y=frac; f.position.y=0.2+frac*1.7;
-      }
-    }
+    if(Factory.labCore){ Factory.labCore.rotation.y+=dt*1.2; }
+    if(Factory.warehouseFills){ for(const r in Factory.warehouseFills){ const f=Factory.warehouseFills[r], res=G.resources[r];
+      const frac=clamp(res.amt/res.cap,0.05,1); f.scaling.y=frac; f.position.y=0.2+frac*1.7; } }
   },
 
-  toggleMode(){
-    if(this.mode==='walk') this.enterManage(); else this.enterWalk();
-  },
-  enterManage(){
-    this.mode='manage';
-    CameraSys.enterManage();
+  toggleMode(){ if(this.mode==='walk') this.enterManage(); else this.enterWalk(); },
+  enterManage(){ this.mode='manage'; CameraSys.enterManage();
     document.getElementById('mgmt').style.display='flex';
     document.getElementById('joyZone').style.display='none';
     document.getElementById('lookpad').style.display='none';
     document.getElementById('interactWrap').style.display='none';
+    document.getElementById('minimap').style.display='none';
     document.getElementById('modeBtn').textContent='🚶 WALK';
-    UI.renderTab(UI.tab);
+    UI.renderTab(UI.tab); Sound.click();
   },
-  enterWalk(){
-    this.mode='walk';
-    CameraSys.enterWalk();
+  enterWalk(){ this.mode='walk'; CameraSys.enterWalk();
     document.getElementById('mgmt').style.display='none';
     document.getElementById('joyZone').style.display='block';
     document.getElementById('lookpad').style.display='block';
-    document.getElementById('modeBtn').textContent='🏭 MANAGE';
-  }
+    document.getElementById('minimap').style.display='block';
+    document.getElementById('modeBtn').textContent='🏭 MANAGE'; Sound.click();
+  },
+  victory(){ const ov=document.getElementById('overlay');
+    document.getElementById('ovTitle').textContent='🏆 GLOBAL EMPIRE!';
+    document.getElementById('ovText').innerHTML='You built an automotive empire valued at '+fmtMoney(G.valuation)+
+      '.<br>'+fmtInt(G.stats.carsSold)+' cars sold · reputation '+Math.round(G.reputation)+
+      ' · '+G.lines.length+' production lines.<br><br>You can keep playing in sandbox mode.';
+    document.getElementById('ovBtn').textContent='Continue Playing';
+    Game._overlayMode='victory'; ov.style.display='flex'; Sound.objective();
+  },
+  defeat(){ if(Game._defeated) return; Game._defeated=true;
+    const ov=document.getElementById('overlay');
+    document.getElementById('ovTitle').textContent='💸 Bankruptcy';
+    document.getElementById('ovTitle').style.background='linear-gradient(90deg,#ff5d6c,#ffb454)';
+    document.getElementById('ovTitle').style.webkitBackgroundClip='text';
+    document.getElementById('ovText').innerHTML='Your debt spiralled out of control. The bank has seized AutoWorks.<br>You sold '+fmtInt(G.stats.carsSold)+' cars before the end.';
+    document.getElementById('ovBtn').textContent='Restart';
+    Game._overlayMode='defeat'; ov.style.display='flex'; Sound.error();
+  },
+  closeOverlay(){ const ov=document.getElementById('overlay'); ov.style.display='none';
+    if(Game._overlayMode==='defeat'){ SaveSys.reset(); } else { Game._defeated=false; } }
 };
 
 /* ====================================================================================
-   INTERACTION  —  proximity detection + context actions (walk mode)
+   INTERACTION
    ==================================================================================== */
 const Interact = {
   current:null,
   update(){
-    const p=Player.mesh.position;
-    let best=null, bestD=Infinity;
-    for(const it of Factory.interactables){
-      const dx=it.pos.x-p.x, dz=it.pos.z-p.z;
-      const d=dx*dx+dz*dz;
-      if(d < it.radius*it.radius && d<bestD){ best=it; bestD=d; }
-    }
-    if(best!==this.current){
-      // clear old glow
-      if(this.current&&this.current.mesh) this.current.mesh.visibility=0;
-      this.current=best;
-      if(best&&best.mesh) best.mesh.visibility=1;
-      this.renderPrompt();
-    }
-    if(this.current&&this.current.mesh){
-      this.current.mesh.visibility = 0.4+0.4*Math.sin(Game.animT*4);
-    }
+    const p=Player.mesh.position; let best=null,bestD=Infinity;
+    for(const it of Factory.interactables){ const dx=it.pos.x-p.x, dz=it.pos.z-p.z; const d=dx*dx+dz*dz;
+      if(d<it.radius*it.radius && d<bestD){ best=it; bestD=d; } }
+    if(best!==this.current){ if(this.current&&this.current.mesh) this.current.mesh.visibility=0;
+      this.current=best; if(best&&best.mesh) best.mesh.visibility=1; this.renderPrompt(); }
+    if(this.current&&this.current.mesh) this.current.mesh.visibility=0.4+0.4*Math.sin(Game.animT*4);
   },
-  renderPrompt(){
-    const wrap=document.getElementById('interactWrap');
+  renderPrompt(){ const wrap=document.getElementById('interactWrap');
     if(!this.current){ wrap.style.display='none'; return; }
-    wrap.style.display='flex';
-    document.getElementById('interactName').textContent=this.current.name;
-    const up=document.getElementById('btnUpgrade');
-    up.textContent = this.current.type==='machine'?'Upgrade':'Open';
+    wrap.style.display='flex'; document.getElementById('interactName').textContent=this.current.name;
+    document.getElementById('btnUpgrade').textContent=this.current.type==='machine'?'Upgrade':'Open';
   },
-  inspect(){
-    const it=this.current; if(!it) return;
-    if(it.type==='machine'){
-      const {lineId,stageKey}=it.data;
-      const lv=machineLevel(lineId,stageKey);
+  inspect(){ const it=this.current; if(!it) return; Sound.click();
+    if(it.type==='machine'){ const {lineId,stageKey}=it.data; const lv=machineLevel(lineId,stageKey);
       const st=STAGE_DEFS.find(s=>s.key===stageKey);
-      UI.toast(st.name+' · Lv '+lv+' · '+Production.stageTime(lineId,stageKey).toFixed(1)+'s · defect '+(Production.defectChance(lineId,stageKey)*100).toFixed(1)+'%','warn');
-    } else if(it.type==='warehouse'){ Game.enterManage(); UI.openTab('economy'); }
-    else if(it.type==='research'){ Game.enterManage(); UI.openTab('research'); }
-    else if(it.type==='shipping'){ Game.enterManage(); UI.openTab('economy'); }
+      UI.toast(st.name+' · Lv '+lv+' · '+Production.stageTime(lineId,stageKey).toFixed(1)+'s · defect '+(Production.defectChance(lineId,stageKey)*100).toFixed(1)+'%','warn'); }
+    else if(it.type==='warehouse'){ UI.openTab('economy'); }
+    else if(it.type==='research'){ UI.openTab('research'); }
+    else if(it.type==='shipping'){ UI.openTab('economy'); }
   },
-  action(){ // primary button
-    const it=this.current; if(!it) return;
+  action(){ const it=this.current; if(!it) return;
     if(it.type==='machine'){ Machines.upgrade(it.data.lineId,it.data.stageKey); }
-    else if(it.type==='warehouse'){ Game.enterManage(); UI.openTab('economy'); }
-    else if(it.type==='research'){ Game.enterManage(); UI.openTab('research'); }
-    else if(it.type==='shipping'){ Game.enterManage(); UI.openTab('company'); }
+    else if(it.type==='warehouse'){ UI.openTab('economy'); }
+    else if(it.type==='research'){ UI.openTab('research'); }
+    else if(it.type==='shipping'){ UI.openTab('company'); }
   }
 };
 
 /* ====================================================================================
-   INPUT  —  joystick (left) + look pad (right) + keyboard + long-press
+   INPUT
    ==================================================================================== */
 const Input = {
-  joyId:null, joyOrigin:{x:0,y:0}, lookId:null, lookLast:{x:0,y:0},
-  pressTimer:null, moved:false,
+  joyId:null, joyOrigin:{x:0,y:0}, lookId:null, lookLast:{x:0,y:0}, pressTimer:null,
   init(){
-    const joyZone=document.getElementById('joyZone');
-    const joyBase=document.getElementById('joyBase');
-    const joyKnob=document.getElementById('joyKnob');
-    const R=58;
+    const joyZone=document.getElementById('joyZone'), joyBase=document.getElementById('joyBase'), joyKnob=document.getElementById('joyKnob');
+    const R=60;
+    joyZone.addEventListener('pointerdown',e=>{ if(this.joyId!==null) return;
+      this.joyId=e.pointerId; joyZone.setPointerCapture(e.pointerId); this.joyOrigin={x:e.clientX,y:e.clientY};
+      joyBase.style.display='block'; joyBase.style.left=(e.clientX-66)+'px'; joyBase.style.top=(e.clientY-66)+'px';
+      joyKnob.style.left='66px'; joyKnob.style.top='66px'; e.preventDefault(); });
+    joyZone.addEventListener('pointermove',e=>{ if(e.pointerId!==this.joyId) return;
+      let dx=e.clientX-this.joyOrigin.x, dy=e.clientY-this.joyOrigin.y; const mag=Math.hypot(dx,dy);
+      if(mag>R){ dx=dx/mag*R; dy=dy/mag*R; } joyKnob.style.left=(66+dx)+'px'; joyKnob.style.top=(66+dy)+'px';
+      Player.joy.x=dx/R; Player.joy.y=-dy/R; e.preventDefault(); });
+    const endJoy=e=>{ if(e.pointerId!==this.joyId) return; this.joyId=null; Player.joy.x=0; Player.joy.y=0; joyBase.style.display='none'; };
+    joyZone.addEventListener('pointerup',endJoy); joyZone.addEventListener('pointercancel',endJoy);
 
-    joyZone.addEventListener('pointerdown',e=>{
-      if(this.joyId!==null) return;
-      this.joyId=e.pointerId; joyZone.setPointerCapture(e.pointerId);
-      this.joyOrigin={x:e.clientX,y:e.clientY};
-      joyBase.style.display='block';
-      joyBase.style.left=(e.clientX-65)+'px'; joyBase.style.top=(e.clientY-65)+'px';
-      joyKnob.style.left='65px'; joyKnob.style.top='65px';
-      e.preventDefault();
-    });
-    joyZone.addEventListener('pointermove',e=>{
-      if(e.pointerId!==this.joyId) return;
-      let dx=e.clientX-this.joyOrigin.x, dy=e.clientY-this.joyOrigin.y;
-      const mag=Math.hypot(dx,dy);
-      if(mag>R){ dx=dx/mag*R; dy=dy/mag*R; }
-      joyKnob.style.left=(65+dx)+'px'; joyKnob.style.top=(65+dy)+'px';
-      Player.joy.x=dx/R; Player.joy.y=-dy/R;
-      e.preventDefault();
-    });
-    const endJoy=e=>{ if(e.pointerId!==this.joyId) return;
-      this.joyId=null; Player.joy.x=0; Player.joy.y=0; joyBase.style.display='none'; };
-    joyZone.addEventListener('pointerup',endJoy);
-    joyZone.addEventListener('pointercancel',endJoy);
-
-    // look pad
     const look=document.getElementById('lookpad');
-    look.addEventListener('pointerdown',e=>{
-      if(this.lookId!==null) return;
-      this.lookId=e.pointerId; look.setPointerCapture(e.pointerId);
-      this.lookLast={x:e.clientX,y:e.clientY};
-      e.preventDefault();
-    });
-    look.addEventListener('pointermove',e=>{
-      if(e.pointerId!==this.lookId) return;
-      const dx=e.clientX-this.lookLast.x, dy=e.clientY-this.lookLast.y;
-      this.lookLast={x:e.clientX,y:e.clientY};
-      CameraSys.look(dx,dy);
-      e.preventDefault();
-    });
+    look.addEventListener('pointerdown',e=>{ if(this.lookId!==null) return; this.lookId=e.pointerId;
+      look.setPointerCapture(e.pointerId); this.lookLast={x:e.clientX,y:e.clientY}; e.preventDefault(); });
+    look.addEventListener('pointermove',e=>{ if(e.pointerId!==this.lookId) return;
+      CameraSys.look(e.clientX-this.lookLast.x, e.clientY-this.lookLast.y); this.lookLast={x:e.clientX,y:e.clientY}; e.preventDefault(); });
     const endLook=e=>{ if(e.pointerId!==this.lookId) return; this.lookId=null; };
-    look.addEventListener('pointerup',endLook);
-    look.addEventListener('pointercancel',endLook);
+    look.addEventListener('pointerup',endLook); look.addEventListener('pointercancel',endLook);
 
-    // mode toggle
     document.getElementById('modeBtn').addEventListener('click',()=>Game.toggleMode());
+    document.getElementById('soundBtn').addEventListener('click',()=>{ Sound.resume(); Sound.setOn(!Sound.on); });
+    document.getElementById('ovBtn').addEventListener('click',()=>Game.closeOverlay());
 
-    // interact buttons (tap = action, long-press inspect handled below)
-    const btnUp=document.getElementById('btnUpgrade');
-    const btnIn=document.getElementById('btnInspect');
-    btnUp.addEventListener('click',()=>Interact.action());
-    btnIn.addEventListener('click',()=>Interact.inspect());
-    // long-press on the upgrade button => inspect (per spec: long press = upgrade/inspect)
+    const btnUp=document.getElementById('btnUpgrade'), btnIn=document.getElementById('btnInspect');
+    btnUp.addEventListener('click',()=>Interact.action()); btnIn.addEventListener('click',()=>Interact.inspect());
     btnUp.addEventListener('pointerdown',()=>{ this.pressTimer=setTimeout(()=>{ Interact.inspect(); this.pressTimer=null; },550); });
     const cancelPress=()=>{ if(this.pressTimer){ clearTimeout(this.pressTimer); this.pressTimer=null; } };
-    btnUp.addEventListener('pointerup',cancelPress);
-    btnUp.addEventListener('pointerleave',cancelPress);
+    btnUp.addEventListener('pointerup',cancelPress); btnUp.addEventListener('pointerleave',cancelPress);
 
-    // keyboard (desktop dev)
     window.addEventListener('keydown',e=>{ Player.keys[e.key]=true;
       if(e.key==='Tab'){ e.preventDefault(); Game.toggleMode(); }
-      if(e.key==='e'||e.key==='E') Interact.action();
-      if(e.key==='q'||e.key==='Q') Interact.inspect();
-    });
+      if(e.key==='e'||e.key==='E') Interact.action(); if(e.key==='q'||e.key==='Q') Interact.inspect(); });
     window.addEventListener('keyup',e=>{ Player.keys[e.key]=false; });
-    // mouse-drag look on desktop (pointer events already cover it via lookpad)
   }
 };
 
 /* ====================================================================================
-   UI SYSTEM  —  HUD + management panels (vanilla DOM)
+   UI SYSTEM
    ==================================================================================== */
 const UI = {
-  tab:'dashboard',
+  tab:'dashboard', designLine:0,
   init(){
-    document.querySelectorAll('.nav').forEach(n=>{
-      n.addEventListener('click',()=>this.openTab(n.dataset.tab));
-    });
+    document.querySelectorAll('.nav').forEach(n=>n.addEventListener('click',()=>this.openTab(n.dataset.tab)));
     document.getElementById('panelClose').addEventListener('click',()=>Game.enterWalk());
   },
-  openTab(t){
-    this.tab=t;
-    document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.tab===t));
-    if(Game.mode!=='manage') Game.enterManage();
-    this.renderTab(t);
-  },
+  openTab(t){ this.tab=t; document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.tab===t));
+    if(Game.mode!=='manage') Game.enterManage(); this.renderTab(t); Sound.click(); },
   refreshHud(){
     document.getElementById('hudCash').textContent=fmtMoney(G.cash);
-    const ppm=document.getElementById('hudPpm'); ppm.textContent=fmtMoney(G.profit.ppm);
-    ppm.className='v '+(G.profit.ppm>=0?'good':'bad');
+    const ppm=document.getElementById('hudPpm'); ppm.textContent=fmtMoney(G.profit.ppm); ppm.className='v '+(G.profit.ppm>=0?'good':'bad');
     document.getElementById('hudRep').textContent=Math.round(G.reputation);
-    const ec=document.getElementById('hudEcon'); ec.textContent=G.economy.state.toUpperCase();
-    ec.className='pill '+G.economy.state;
+    const ec=document.getElementById('hudEcon'); ec.textContent=G.economy.state.toUpperCase(); ec.className='pill '+G.economy.state;
   },
-  // ---- toast log ----
-  toast(msg,type){
-    const box=document.getElementById('toast');
-    const el=document.createElement('div'); el.className='toastItem '+(type||'');
-    el.textContent=msg; box.appendChild(el);
+  toast(msg,type){ const box=document.getElementById('toast'); const el=document.createElement('div');
+    el.className='toastItem '+(type||''); el.textContent=msg; box.appendChild(el);
     requestAnimationFrame(()=>el.classList.add('show'));
-    setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),300); },2600);
+    setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),300); },2800);
     while(box.children.length>4) box.removeChild(box.firstChild);
   },
-  // ---- panel rendering ----
   renderTab(t){
-    document.getElementById('panelTitle').textContent={
-      dashboard:'Dashboard',factory:'Factory',design:'Car Design',
+    document.getElementById('panelTitle').textContent={dashboard:'Dashboard',factory:'Factory',design:'Car Design',
       economy:'Economy & Supply',research:'Research',company:'Company'}[t]||'';
-    const b=document.getElementById('panelBody');
-    b.innerHTML=this['tab_'+t]?this['tab_'+t]():'';
-    this['bind_'+t]&&this['bind_'+t]();
+    const b=document.getElementById('panelBody'); b.innerHTML=this['tab_'+t]?this['tab_'+t]():''; this['bind_'+t]&&this['bind_'+t]();
   },
 
-  /* ---------------- DASHBOARD ---------------- */
+  /* DASHBOARD */
   tab_dashboard(){
-    const inProd=G.lines.reduce((s,l)=>s+l.slots.filter(x=>x).length,0);
-    const ls=G.lastSale;
+    const inProd=G.lines.reduce((s,l)=>s+l.slots.filter(x=>x).length,0); const ls=G.lastSale;
+    let obj=''; OBJECTIVES.forEach((o,i)=>{ const cls=i<G.objIndex?'done':i===G.objIndex?'cur':'future';
+      obj+=`<div class="objItem ${cls}"><div class="ck">${i<G.objIndex?'✓':''}</div><div>${o.desc}</div></div>`; });
     return `
     <div class="card">
       <div class="row"><span class="k">Cash</span><span class="vv">${fmtMoney(G.cash)}</span></div>
-      <div class="row"><span class="k">Profit / min</span><span class="vv ${G.profit.ppm>=0?'':'bad'}" style="color:${G.profit.ppm>=0?'var(--good)':'var(--bad)'}">${fmtMoney(G.profit.ppm)}</span></div>
+      <div class="row"><span class="k">Profit / min</span><span class="vv" style="color:${G.profit.ppm>=0?'var(--good)':'var(--bad)'}">${fmtMoney(G.profit.ppm)}</span></div>
       <div class="row"><span class="k">Company valuation</span><span class="vv">${fmtMoney(G.valuation)}</span></div>
       <div class="row"><span class="k">Debt</span><span class="vv" style="color:${G.debt>0?'var(--warn)':'var(--muted)'}">${fmtMoney(G.debt)}</span></div>
       <div class="row"><span class="k">Reputation</span><span class="vv">${Math.round(G.reputation)}/100</span></div>
       <div class="bar"><i style="width:${G.reputation}%"></i></div>
     </div>
-    <div class="card">
-      <h3>Production Overview</h3>
+    <div class="card"><h3>🎯 Objectives</h3>${obj}</div>
+    <div class="card"><h3>Production Overview</h3>
       <div class="row"><span class="k">Active lines</span><span class="vv">${G.lines.length}</span></div>
+      <div class="row"><span class="k">Workers</span><span class="vv">${G.workers} / need ${Workforce.needed()}</span></div>
       <div class="row"><span class="k">Cars on lines</span><span class="vv">${inProd}</span></div>
-      <div class="row"><span class="k">Total built</span><span class="vv">${fmtInt(G.stats.carsBuilt)}</span></div>
-      <div class="row"><span class="k">Total sold</span><span class="vv">${fmtInt(G.stats.carsSold)}</span></div>
+      <div class="row"><span class="k">Total built / sold</span><span class="vv">${fmtInt(G.stats.carsBuilt)} / ${fmtInt(G.stats.carsSold)}</span></div>
       <div class="row"><span class="k">Lifetime revenue</span><span class="vv">${fmtMoney(G.stats.revenue)}</span></div>
       <div class="row"><span class="k">Factory size</span><span class="vv">${SIZES[G.factory.sizeIdx]}</span></div>
     </div>
-    <div class="card">
-      <h3>Market</h3>
-      <div class="row"><span class="k">Economy</span><span class="vv pill ${G.economy.state}" >${G.economy.state.toUpperCase()}</span></div>
+    <div class="card"><h3>Market</h3>
+      <div class="row"><span class="k">Economy</span><span class="vv pill ${G.economy.state}">${G.economy.state.toUpperCase()}</span></div>
       <div class="row"><span class="k">Your est. market share</span><span class="vv">${((G._playerShare||0.1)*100).toFixed(1)}%</span></div>
       ${ls?`<div class="row"><span class="k">Last sale</span><span class="vv">${CAT_META[ls.cat].name} ${fmtMoney(ls.price)} (${ls.profit>=0?'+':''}${fmtMoney(ls.profit)})</span></div>`:''}
     </div>
-    <div class="small" style="text-align:center;padding:6px">Tip: tap 🚶 WALK and explore your factory. Walk up to machines to upgrade them.</div>`;
+    <div class="small" style="text-align:center;padding:6px">Tip: tap 🚶 WALK, explore your factory, and walk up to machines to upgrade them.</div>`;
   },
 
-  /* ---------------- FACTORY ---------------- */
+  /* FACTORY */
   tab_factory(){
-    let html='';
+    let html=`<div class="card"><h3>👷 Workforce</h3>
+      <div class="row"><span class="k">Workers</span><span class="vv">${G.workers} / ${Workforce.cap()} (need ${Workforce.needed()})</span></div>
+      <div class="bar q"><i style="width:${clamp(Workforce.ratio()/1.5*100,0,100)}%"></i></div>
+      <div class="small">Staffing affects line speed (${(Workforce.throughputMult()*100|0)}%) and defect rate. Wages: ${fmtMoney(Workforce.wagesPerSec()*60)}/min.</div>
+      <div class="grid3" style="margin-top:8px">
+        <button class="btn" data-hire="1">Hire +1</button>
+        <button class="btn" data-hire="5">Hire +5</button>
+        <button class="btn ghost" data-fire="1">Fire −1</button>
+      </div></div>`;
     G.lines.forEach((line,li)=>{
-      html+=`<div class="card"><h3>Production Line ${li+1}</h3>`;
-      STAGE_DEFS.forEach(st=>{
-        const lv=machineLevel(line.id,st.key);
-        const time=Production.stageTime(line.id,st.key).toFixed(1);
-        const def=(Production.defectChance(line.id,st.key)*100).toFixed(1);
-        const cost=Machines.upgradeCost(line.id,st.key);
-        const car=line.slots[STAGE_DEFS.indexOf(st)];
-        html+=`<div class="row">
-          <span class="k">${st.name} <span class="tag">Lv ${lv}</span>${car?'<span class="tag on">●working</span>':''}</span>
-          <button class="btn" style="width:auto;padding:7px 10px" data-up="${line.id}|${st.key}" ${G.cash<cost||lv>=8?'disabled':''}>
-            ${lv>=8?'MAX':'⬆ '+fmtMoney(cost)}</button></div>
+      html+=`<div class="card"><h3>Line ${li+1} <span class="tag">${line.design.name}</span><span class="tag on">${CAT_META[line.design.category].name}</span></h3>`;
+      STAGE_DEFS.forEach((st,idx)=>{
+        const lv=machineLevel(line.id,st.key); const time=Production.stageTime(line.id,st.key).toFixed(1);
+        const def=(Production.defectChance(line.id,st.key)*100).toFixed(1); const cost=Machines.upgradeCost(line.id,st.key);
+        const car=line.slots[idx];
+        html+=`<div class="row"><span class="k">${st.name} <span class="tag">Lv ${lv}</span>${car?'<span class="tag on">●</span>':''}</span>
+          <button class="btn" style="width:auto;padding:7px 10px" data-up="${line.id}|${st.key}" ${G.cash<cost||lv>=8?'disabled':''}>${lv>=8?'MAX':'⬆ '+fmtMoney(cost)}</button></div>
           <div class="small">${time}s · defect ${def}%</div>`;
       });
-      html+='</div>';
+      html+=`<button class="btn ghost" style="margin-top:8px" data-design="${li}">🚗 Configure ${line.design.name}</button></div>`;
     });
-    html+=`<button class="btn alt" id="addLineBtn">➕ Build Production Line — ${fmtMoney(Expansion.lineCost())}</button>`;
+    html+=`<button class="btn alt" id="addLineBtn" ${G.cash<Expansion.lineCost()?'disabled':''}>➕ Build Production Line — ${fmtMoney(Expansion.lineCost())}</button>`;
     return html;
   },
   bind_factory(){
-    document.querySelectorAll('[data-up]').forEach(btn=>{
-      btn.addEventListener('click',()=>{ const [l,k]=btn.dataset.up.split('|');
-        if(Machines.upgrade(parseInt(l),k)) this.renderTab('factory'); });
-    });
-    const add=document.getElementById('addLineBtn');
-    if(add) add.addEventListener('click',()=>{ Expansion.addLine(); this.renderTab('factory'); });
+    document.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{ const [l,k]=b.dataset.up.split('|');
+      if(Machines.upgrade(parseInt(l),k)) this.renderTab('factory'); }));
+    document.querySelectorAll('[data-hire]').forEach(b=>b.addEventListener('click',()=>{ Workforce.hire(parseInt(b.dataset.hire)); this.renderTab('factory'); }));
+    document.querySelectorAll('[data-fire]').forEach(b=>b.addEventListener('click',()=>{ Workforce.fire(parseInt(b.dataset.fire)); this.renderTab('factory'); }));
+    document.querySelectorAll('[data-design]').forEach(b=>b.addEventListener('click',()=>{ this.designLine=parseInt(b.dataset.design); this.openTab('design'); }));
+    const add=document.getElementById('addLineBtn'); if(add) add.addEventListener('click',()=>{ Expansion.addLine(); this.renderTab('factory'); });
   },
 
-  /* ---------------- DESIGN ---------------- */
+  /* DESIGN */
   tab_design(){
-    const d=G.design;
-    const cost=Supply.carCost(d.category);
-    const mk=G.market[d.category];
-    const evOk=ResearchSystem.evUnlocked();
-    const qBonus=ResearchSystem.qualityBonus();
-    const estPrice = mk.price*(0.55+(clamp(d.qualityTarget+qBonus,5,100)/100)*0.9)*(0.7+G.reputation/100*0.6)*ResearchSystem.sellMult();
-    const eff = clamp(120 - d.weight*0.6 - d.enginePower*0.3 + (d.category==='electric'?20:0),5,100);
-    let seg='';
-    CATS.forEach(c=>{
-      const locked = c==='electric'&&!evOk;
-      seg+=`<button class="${d.category===c?'sel':''}" data-cat="${c}" ${locked?'disabled style="opacity:.4"':''}>${CAT_META[c].name}${locked?' 🔒':''}</button>`;
-    });
+    if(this.designLine>=G.lines.length) this.designLine=0;
+    const line=G.lines[this.designLine]; const d=line.design;
+    const cost=Supply.carCost(d); const mk=G.market[d.category]; const evOk=ResearchSystem.evUnlocked(); const qBonus=ResearchSystem.qualityBonus();
+    const estPrice=mk.price*(0.55+(clamp(d.qualityTarget+qBonus,5,100)/100)*0.9)*(0.7+G.reputation/100*0.6)*ResearchSystem.sellMult();
+    const eff=clamp(120-d.weight*0.6-d.enginePower*0.3+(d.category==='electric'?20:0),5,100);
+    let lineSel=''; G.lines.forEach((l,i)=>{ lineSel+=`<button class="${this.designLine===i?'sel':''}" data-ln="${i}">Line ${i+1}</button>`; });
+    let seg=''; CATS.forEach(c=>{ const locked=c==='electric'&&!evOk;
+      seg+=`<button class="${d.category===c?'sel':''}" data-cat="${c}" ${locked?'disabled':''}>${CAT_META[c].name}${locked?' 🔒':''}</button>`; });
     return `
-    <div class="card">
-      <h3>Vehicle Category</h3>
-      <div class="seg">${seg}</div>
-      ${!evOk?'<div class="small">Electric unlocks via Research → EV Platform.</div>':''}
+    <div class="card"><h3>Editing line</h3><div class="seg">${lineSel}</div>
+      <div class="row"><span class="k">Model name</span></div>
+      <input type="text" id="modelName" value="${d.name.replace(/"/g,'')}" maxlength="18">
     </div>
-    <div class="card">
-      <h3>Specifications</h3>
+    <div class="card"><h3>Vehicle Category</h3><div class="seg">${seg}</div>
+      ${!evOk?'<div class="small">Electric unlocks via Research → EV Platform.</div>':''}</div>
+    <div class="card"><h3>Specifications</h3>
       <div class="row"><span class="k">Engine Power</span><span class="vv">${d.enginePower}</span></div>
       <input type="range" min="10" max="100" value="${d.enginePower}" data-spec="enginePower">
       <div class="row"><span class="k">Weight</span><span class="vv">${d.weight}</span></div>
@@ -1366,114 +1530,93 @@ const UI = {
       <div class="row"><span class="k">Quality Target</span><span class="vv">${d.qualityTarget}${qBonus?' (+'+qBonus+')':''}</span></div>
       <input type="range" min="20" max="100" value="${d.qualityTarget}" data-spec="qualityTarget">
     </div>
-    <div class="card">
-      <h3>Live Preview — ${CAT_META[d.category].name}</h3>
+    <div class="card"><h3>Live Preview — ${CAT_META[d.category].name}</h3>
       <div class="row"><span class="k">Production cost / unit</span><span class="vv">${fmtMoney(cost)}</span></div>
       <div class="row"><span class="k">Est. sale price</span><span class="vv">${fmtMoney(estPrice)}</span></div>
       <div class="row"><span class="k">Est. margin / unit</span><span class="vv" style="color:${estPrice-cost>=0?'var(--good)':'var(--bad)'}">${fmtMoney(estPrice-cost)}</span></div>
       <div class="row"><span class="k">Efficiency rating</span><span class="vv">${Math.round(eff)}/100</span></div>
       <div class="row"><span class="k">Market demand</span><span class="vv">${mk.demand.toFixed(1)} /min</span></div>
-      <div class="small">New cars entering the line use these specs. Higher quality lifts price & reputation but costs more.</div>
+      <div class="small">Each line builds its own model. Diversify across categories to spread market risk.</div>
     </div>`;
   },
   bind_design(){
-    document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{
-      if(b.disabled) return; G.design.category=b.dataset.cat; this.renderTab('design'); }));
-    document.querySelectorAll('[data-spec]').forEach(inp=>{
-      inp.addEventListener('input',()=>{ G.design[inp.dataset.spec]=parseInt(inp.value); this.renderTab('design'); });
-    });
+    const line=G.lines[this.designLine]; const d=line.design;
+    document.querySelectorAll('[data-ln]').forEach(b=>b.addEventListener('click',()=>{ this.designLine=parseInt(b.dataset.ln); this.renderTab('design'); }));
+    document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{ if(b.disabled) return; d.category=b.dataset.cat; this.renderTab('design'); }));
+    document.querySelectorAll('[data-spec]').forEach(inp=>inp.addEventListener('input',()=>{ d[inp.dataset.spec]=parseInt(inp.value); this.renderTab('design'); }));
+    const nm=document.getElementById('modelName'); if(nm) nm.addEventListener('change',()=>{ d.name=nm.value.slice(0,18)||'Model'; });
   },
 
-  /* ---------------- ECONOMY & SUPPLY ---------------- */
+  /* ECONOMY */
   tab_economy(){
     let res='';
-    for(const k in G.resources){
-      const r=G.resources[k];
-      const trend = r.price>r.base*1.05?'▲':r.price<r.base*0.95?'▼':'▬';
-      const tc = r.price>r.base*1.05?'var(--bad)':r.price<r.base*0.95?'var(--good)':'var(--muted)';
-      res+=`<div class="card">
-        <div class="row"><span class="k">${k.toUpperCase()}</span>
-          <span class="vv">${fmtMoney(r.price)} <span style="color:${tc}">${trend}</span></span></div>
+    for(const k in G.resources){ const r=G.resources[k];
+      const trend=r.price>r.base*1.05?'▲':r.price<r.base*0.95?'▼':'▬'; const tc=r.price>r.base*1.05?'var(--bad)':r.price<r.base*0.95?'var(--good)':'var(--muted)';
+      res+=`<div class="card"><div class="row"><span class="k">${k.toUpperCase()}</span>
+        <span class="vv">${fmtMoney(r.price)} <span style="color:${tc}">${trend}</span></span></div>
         <div class="bar"><i style="width:${clamp(r.amt/r.cap*100,0,100)}%"></i></div>
         <div class="row"><span class="small">${fmtInt(r.amt)} / ${fmtInt(r.cap)} units</span></div>
-        <div class="grid3">
-          <button class="btn" data-buy="${k}|50">Buy 50</button>
+        <div class="grid3"><button class="btn" data-buy="${k}|50">Buy 50</button>
           <button class="btn" data-buy="${k}|200">Buy 200</button>
-          <button class="btn alt" data-contract="${k}">Contract</button>
-        </div>
-      </div>`;
+          <button class="btn alt" data-contract="${k}">Contract</button></div></div>`;
     }
+    let evt='';
+    if(G.activeEffects.length){ evt='<div class="card"><h3>⚡ Active Market Events</h3>';
+      G.activeEffects.forEach(e=>{ evt+=`<div class="row"><span class="k">${e.label}</span><span class="vv tag warn">${e.ticks}s</span></div>`; }); evt+='</div>'; }
+    if(G.marketing.ticks>0) evt+=`<div class="card"><div class="row"><span class="k">📣 Marketing boost</span><span class="vv tag on">${G.marketing.ticks}s</span></div></div>`;
+    let mkt='<div class="card"><h3>Car Market Prices</h3>';
+    CATS.forEach(c=>{ const mk=G.market[c]; mkt+=`<div class="row"><span class="k">${CAT_META[c].name}</span>
+      <span class="vv">${fmtMoney(mk.price)} <span class="small">dem ${mk.demand.toFixed(1)} · sat ${(mk.sat*100).toFixed(0)}%</span></span></div>`; }); mkt+='</div>';
     let comp='<div class="card"><h3>Competitors</h3>';
     G.ai.forEach(a=>{ comp+=`<div class="row"><span class="k">${a.name} <span class="small">(${a.strat}, ${CAT_META[a.focus].name})</span></span>
       <span class="vv">${(a.share*100).toFixed(1)}% · rep ${Math.round(a.rep)}</span></div>`; });
     comp+=`<div class="row"><span class="k" style="color:var(--acc)">YOU</span><span class="vv" style="color:var(--acc)">${((G._playerShare||0.1)*100).toFixed(1)}% · rep ${Math.round(G.reputation)}</span></div></div>`;
-
-    let mkt='<div class="card"><h3>Car Market Prices</h3>';
-    CATS.forEach(c=>{ const mk=G.market[c];
-      mkt+=`<div class="row"><span class="k">${CAT_META[c].name}</span>
-      <span class="vv">${fmtMoney(mk.price)} <span class="small">dem ${mk.demand.toFixed(1)} · sat ${(mk.sat*100).toFixed(0)}%</span></span></div>`; });
-    mkt+='</div>';
-
-    let con='';
-    if(G.contracts.length){
-      con='<div class="card"><h3>Active Contracts</h3>';
-      G.contracts.forEach(c=>{ con+=`<div class="row"><span class="k">${c.res} @ ${fmtMoney(c.price)}</span><span class="vv">${c.qtyPerMin}/min · ${c.ticksLeft}s left</span></div>`; });
-      con+='</div>';
-    }
+    let con=''; if(G.contracts.length){ con='<div class="card"><h3>Active Contracts</h3>';
+      G.contracts.forEach(c=>{ con+=`<div class="row"><span class="k">${c.res} @ ${fmtMoney(c.price)}</span><span class="vv">${c.qtyPerMin}/min · ${c.ticksLeft}s</span></div>`; }); con+='</div>'; }
     return `<div class="card"><div class="row"><span class="k">Economy state</span><span class="vv pill ${G.economy.state}">${G.economy.state.toUpperCase()}</span></div>
-      <div class="small">Resource prices fluctuate globally. Lock supply with contracts to hedge against scarcity.</div></div>`
-      + res + con + mkt + comp;
+      <div class="small">Resource prices fluctuate globally and react to events. Lock supply with contracts to hedge scarcity.</div></div>`
+      + evt + res + con + mkt + comp;
   },
   bind_economy(){
-    document.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>{
-      const [r,q]=b.dataset.buy.split('|'); Supply.buy(r,parseInt(q)); this.renderTab('economy'); }));
-    document.querySelectorAll('[data-contract]').forEach(b=>b.addEventListener('click',()=>{
-      Supply.signContract(b.dataset.contract, 600, 120); this.renderTab('economy'); }));
+    document.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>{ const [r,q]=b.dataset.buy.split('|'); Supply.buy(r,parseInt(q)); this.renderTab('economy'); }));
+    document.querySelectorAll('[data-contract]').forEach(b=>b.addEventListener('click',()=>{ Supply.signContract(b.dataset.contract,600,120); this.renderTab('economy'); }));
   },
 
-  /* ---------------- RESEARCH ---------------- */
+  /* RESEARCH */
   tab_research(){
     const tiers={}; Object.keys(TECH).forEach(id=>{ const t=TECH[id]; (tiers[t.tier]=tiers[t.tier]||[]).push(id); });
-    let cols='';
-    Object.keys(tiers).sort().forEach(tier=>{
-      cols+='<div class="techCol">';
-      tiers[tier].forEach(id=>{
-        const t=TECH[id]; const done=ResearchSystem.has(id); const avail=ResearchSystem.available(id);
-        const cls=done?'done':avail?'avail':'lock';
-        const depTxt = t.deps.length?('Needs: '+t.deps.map(d=>TECH[d].name).join(', ')):'';
-        cols+=`<div class="techNode ${cls}">
-          <h4>${t.name} ${done?'<span class="tag on">✓</span>':''}</h4>
-          <div class="desc">${t.desc}</div>
-          ${done?'<div class="small">Researched</div>':
-            `<button class="btn" data-tech="${id}" ${avail&&G.researchPoints>=t.cost?'':'disabled'}>${t.cost} RP</button>
-             ${depTxt?`<div class="small">${depTxt}</div>`:''}`}
-        </div>`;
-      });
-      cols+='</div>';
-    });
+    let cols=''; Object.keys(tiers).sort().forEach(tier=>{ cols+='<div class="techCol">';
+      tiers[tier].forEach(id=>{ const t=TECH[id]; const done=ResearchSystem.has(id), avail=ResearchSystem.available(id);
+        const cls=done?'done':avail?'avail':'lock'; const depTxt=t.deps.length?('Needs: '+t.deps.map(d=>TECH[d].name).join(', ')):'';
+        cols+=`<div class="techNode ${cls}"><h4>${t.name} ${done?'<span class="tag on">✓</span>':''}</h4>
+          <div class="desc">${t.desc}</div>${done?'<div class="small">Researched</div>':
+          `<button class="btn" data-tech="${id}" ${avail&&G.researchPoints>=t.cost?'':'disabled'}>${t.cost} RP</button>${depTxt?`<div class="small">${depTxt}</div>`:''}`}</div>`; });
+      cols+='</div>'; });
     return `<div class="card"><div class="row"><span class="k">Research Points</span><span class="vv" style="color:var(--acc2)">${G.researchPoints.toFixed(0)} RP</span></div>
-      <div class="small">Generating ${Game.rpRate().toFixed(2)} RP/s from your research lab. Walk into the lab dome to open this tab quickly.</div></div>
+      <div class="small">Generating ${Game.rpRate().toFixed(2)} RP/s. Walk into the lab dome to open this tab quickly.</div></div>
       <div id="techGrid">${cols}</div>`;
   },
-  bind_research(){
-    document.querySelectorAll('[data-tech]').forEach(b=>b.addEventListener('click',()=>{
-      if(ResearchSystem.unlock(b.dataset.tech)) this.renderTab('research'); }));
-  },
+  bind_research(){ document.querySelectorAll('[data-tech]').forEach(b=>b.addEventListener('click',()=>{ if(ResearchSystem.unlock(b.dataset.tech)) this.renderTab('research'); })); },
 
-  /* ---------------- COMPANY ---------------- */
+  /* COMPANY */
   tab_company(){
-    const sizeNext = G.factory.sizeIdx<SIZES.length-1? SIZES[G.factory.sizeIdx+1]:null;
+    const sizeNext=G.factory.sizeIdx<SIZES.length-1?SIZES[G.factory.sizeIdx+1]:null;
+    const q=G.settings.quality==='high';
     return `
-    <div class="card">
-      <h3>Empire</h3>
+    <div class="card"><h3>Empire</h3>
       <div class="row"><span class="k">Factory size</span><span class="vv">${SIZES[G.factory.sizeIdx]}</span></div>
       <div class="row"><span class="k">Production lines</span><span class="vv">${G.lines.length}</span></div>
-      <div class="row"><span class="k">Automation level</span><span class="vv">${G.factory.automation}</span></div>
+      <div class="row"><span class="k">Workers</span><span class="vv">${G.workers}</span></div>
+      <div class="row"><span class="k">Automation</span><span class="vv">${G.factory.automation?'On':'—'}</span></div>
       <div class="row"><span class="k">Second factory</span><span class="vv">${G.factory.secondFactory?'✓ Online':'—'}</span></div>
       <div class="row"><span class="k">Valuation</span><span class="vv">${fmtMoney(G.valuation)}</span></div>
     </div>
-    <div class="card">
-      <h3>Expansion</h3>
+    <div class="card"><h3>📣 Marketing</h3>
+      <button class="btn purple" id="mkSmall">Local campaign — ${fmtMoney(50000)} (+25% demand 90s)</button>
+      <div style="height:8px"></div>
+      <button class="btn purple" id="mkBig">National campaign — ${fmtMoney(200000)} (+45% demand 120s, +rep)</button>
+    </div>
+    <div class="card"><h3>Expansion</h3>
       <button class="btn alt" id="cAddLine">➕ Production Line — ${fmtMoney(Expansion.lineCost())}</button>
       <div style="height:8px"></div>
       <button class="btn" id="cWarehouse">📦 Expand Warehouse (×1.4 cap) — ${fmtMoney(Expansion.warehouseCost())}</button>
@@ -1481,31 +1624,27 @@ const UI = {
       <button class="btn" id="cSize" ${sizeNext?'':'disabled'}>${sizeNext?'🏗️ Upgrade to '+sizeNext+' — '+fmtMoney(Expansion.sizeCost()):'Max size reached'}</button>
       <div style="height:8px"></div>
       <button class="btn warn" id="cSecond" ${G.factory.secondFactory?'disabled':''}>🏭 Build Second Factory — ${fmtMoney(8000000)}</button>
-      <div class="small">Mega/Global upgrades & the second factory require the Mega Factory research.</div>
+      <div class="small">Mega/Global sizes & the second factory require Mega Factory research.</div>
     </div>
-    <div class="card">
-      <h3>Finance — Loans</h3>
+    <div class="card"><h3>Finance — Loans</h3>
       <div class="row"><span class="k">Current debt</span><span class="vv" style="color:${G.debt>0?'var(--warn)':'var(--muted)'}">${fmtMoney(G.debt)}</span></div>
-      <div class="grid2">
-        <button class="btn" id="loan250">Borrow ${fmtMoney(250000)}</button>
-        <button class="btn" id="loan1m">Borrow ${fmtMoney(1000000)}</button>
-      </div>
+      <div class="grid2"><button class="btn" id="loan250">Borrow ${fmtMoney(250000)}</button><button class="btn" id="loan1m">Borrow ${fmtMoney(1000000)}</button></div>
       <div style="height:8px"></div>
       <button class="btn ghost" id="repay">Repay ${fmtMoney(Math.min(G.debt,G.cash))}</button>
-      <div class="small">Interest accrues ~3%/min. Borrow to expand fast, but watch the debt.</div>
+      <div class="small">Interest ~3%/min. Borrow to expand fast — but bankruptcy ends the game.</div>
     </div>
-    <div class="card">
-      <h3>Save</h3>
-      <div class="grid2">
-        <button class="btn ghost" id="saveNow">💾 Save now</button>
-        <button class="btn warn" id="resetGame">↺ Reset game</button>
-      </div>
-      <div class="small">Auto-saves every 45s to this device (localStorage).</div>
+    <div class="card"><h3>⚙️ Settings</h3>
+      <div class="row"><span class="k">High graphics (glow, particles)</span><span class="toggle"><span class="sw ${q?'on':''}" id="swQual"><i></i></span></span></div>
+      <div class="row"><span class="k">Sound</span><span class="toggle"><span class="sw ${G.settings.sound?'on':''}" id="swSound"><i></i></span></span></div>
+      <div class="row"><span class="k">Show FPS</span><span class="toggle"><span class="sw ${G.settings.fps?'on':''}" id="swFps"><i></i></span></span></div>
+      <div class="grid2" style="margin-top:8px"><button class="btn ghost" id="saveNow">💾 Save now</button><button class="btn warn" id="resetGame">↺ Reset game</button></div>
+      <div class="small">Auto-saves every 45s. Turn graphics to Low if performance drops on your device.</div>
     </div>`;
   },
   bind_company(){
-    const r=()=>this.renderTab('company');
-    const on=(id,fn)=>{ const el=document.getElementById(id); if(el) el.addEventListener('click',fn); };
+    const r=()=>this.renderTab('company'); const on=(id,fn)=>{ const el=document.getElementById(id); if(el) el.addEventListener('click',fn); };
+    on('mkSmall',()=>{ Marketing.campaign(50000,1.25,90,1); r(); });
+    on('mkBig',()=>{ Marketing.campaign(200000,1.45,120,3); r(); });
     on('cAddLine',()=>{ Expansion.addLine(); r(); });
     on('cWarehouse',()=>{ Expansion.expandWarehouse(); r(); });
     on('cSize',()=>{ Expansion.upgradeSize(); r(); });
@@ -1513,77 +1652,53 @@ const UI = {
     on('loan250',()=>{ Economy.takeLoan(250000); r(); });
     on('loan1m',()=>{ Economy.takeLoan(1000000); r(); });
     on('repay',()=>{ Economy.repay(G.cash); r(); });
-    on('saveNow',()=>{ SaveSys.save(); UI.toast('Game saved','good'); });
-    on('resetGame',()=>{ if(confirm('Reset all progress?')){ SaveSys.reset(); } });
+    on('saveNow',()=>{ SaveSys.save(); UI.toast('Game saved','good'); Sound.click(); });
+    on('resetGame',()=>{ if(confirm('Reset all progress?')) SaveSys.reset(); });
+    on('swQual',()=>{ G.settings.quality=G.settings.quality==='high'?'low':'high'; Scene.applyQuality(); r(); });
+    on('swSound',()=>{ Sound.resume(); Sound.setOn(!G.settings.sound); r(); });
+    on('swFps',()=>{ G.settings.fps=!G.settings.fps; Scene.applyQuality(); r(); });
   }
 };
 
 /* ====================================================================================
-   SAVE SYSTEM  —  localStorage
+   SAVE SYSTEM
    ==================================================================================== */
 const SaveSys = {
-  KEY:'autoworks_tycoon_save_v3',
-  save(){
-    try{
-      // strip mesh refs from cars before serialising
-      const clean=JSON.parse(JSON.stringify(G,(k,v)=> (k==='mesh')?undefined:v));
-      localStorage.setItem(this.KEY, JSON.stringify(clean));
-    }catch(e){ /* ignore quota */ }
-  },
+  KEY:'autoworks_tycoon_save_v4',
+  save(){ try{ const clean=JSON.parse(JSON.stringify(G,(k,v)=>(k==='mesh')?undefined:v)); localStorage.setItem(this.KEY,JSON.stringify(clean)); }catch(e){} },
   load(){
     try{
-      const raw=localStorage.getItem(this.KEY);
-      if(!raw) return false;
-      const data=JSON.parse(raw);
-      if(!data||data.version!==3) return false;
-      // merge into fresh defaults to be safe with new fields
-      const base=freshState();
-      G=Object.assign(base,data);
-      // rebuild line slot meshes references (cars in-progress get fresh instances on next sync)
-      G.lines.forEach(line=>{ line.slots=line.slots.map(c=>{
-        if(c){ c.mesh=Factory.acquireCar(c.category); }
-        return c||null; }); });
-      UI.toast('Save loaded — welcome back!','good');
-      return true;
+      const raw=localStorage.getItem(this.KEY); if(!raw) return false;
+      const data=JSON.parse(raw); if(!data||data.version!==4) return false;
+      const base=freshState(); G=Object.assign(base,data);
+      // migrate / heal structure
+      if(!G.settings) G.settings=base.settings; if(!G.marketing) G.marketing=base.marketing;
+      if(!G.activeEffects) G.activeEffects=[];
+      G.lines.forEach(line=>{ if(!line.design) line.design=DEFAULT_DESIGN();
+        line.slots=(line.slots||STAGE_DEFS.map(()=>null)).map(c=>{ if(c){ c.mesh=Factory.acquireCar(c.category); } return c||null; }); });
+      UI.toast('Save loaded — welcome back!','good'); return true;
     }catch(e){ return false; }
   },
-  reset(){
-    localStorage.removeItem(this.KEY);
-    location.reload();
-  }
+  reset(){ localStorage.removeItem(this.KEY); location.reload(); }
 };
 
 /* ====================================================================================
-   BOOT  —  load Babylon from CDN (with fallbacks), then enable the game
+   BOOT
    ==================================================================================== */
 function loadBabylon(srcs, cb){
-  (function next(i){
-    if(typeof BABYLON!=='undefined') return cb(true);
-    if(i>=srcs.length) return cb(false);
-    const s=document.createElement('script');
-    s.src=srcs[i]; s.async=false;
-    s.onload=()=>cb(typeof BABYLON!=='undefined');
-    s.onerror=()=>next(i+1);
-    document.head.appendChild(s);
+  (function next(i){ if(typeof BABYLON!=='undefined') return cb(true); if(i>=srcs.length) return cb(false);
+    const s=document.createElement('script'); s.src=srcs[i]; s.async=false;
+    s.onload=()=>cb(typeof BABYLON!=='undefined'); s.onerror=()=>next(i+1); document.head.appendChild(s);
   })(0);
 }
 window.addEventListener('load',()=>{
-  const hint=document.getElementById('loadHint');
-  const startBtn=document.getElementById('startBtn');
-  startBtn.disabled=true;
-  loadBabylon([
-    'https://cdn.babylonjs.com/babylon.js',
-    'https://cdn.jsdelivr.net/npm/babylonjs/babylon.js',
-    'https://unpkg.com/babylonjs/babylon.js'
-  ], ok=>{
-    if(!ok || typeof BABYLON==='undefined'){
-      hint.textContent='Could not load the 3D engine — check your connection and reload.'; return;
-    }
-    hint.textContent='Engine ready · Babylon '+BABYLON.Engine.Version;
-    startBtn.disabled=false;
+  const hint=document.getElementById('loadHint'), startBtn=document.getElementById('startBtn'); startBtn.disabled=true;
+  loadBabylon(['https://cdn.babylonjs.com/babylon.js','https://cdn.jsdelivr.net/npm/babylonjs/babylon.js','https://unpkg.com/babylonjs/babylon.js'], ok=>{
+    if(!ok||typeof BABYLON==='undefined'){ hint.textContent='Could not load the 3D engine — check your connection and reload.'; return; }
+    hint.textContent='Engine ready · Babylon '+BABYLON.Engine.Version; startBtn.disabled=false;
     startBtn.addEventListener('click',()=>{
       document.getElementById('intro').classList.add('hidden');
-      try{ Game.start(); Game.enterWalk(); UI.refreshHud(); }
+      try{ Sound.init(); Sound.resume(); Game.start(); Game.enterWalk(); UI.refreshHud(); }
       catch(err){ alert('Error starting game: '+err.message); console.error(err); }
     },{once:true});
   });
